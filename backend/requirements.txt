@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+python-socketio
+fastapi-socketio
+requests
+python-dotenv
+openai
+wikipedia-api
+pydantic

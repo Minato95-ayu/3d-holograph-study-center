@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+@theme {
+  --color-neon-cyan: #00f2ff;
+  --color-neon-blue: #0066ff;
+  --color-hologram-bg: rgba(0, 242, 255, 0.03);
+  --color-glass-bg: rgba(15, 23, 42, 0.6);
+  --color-glass-border: rgba(255, 255, 255, 0.08);
+}
+
+:root {
+  --primary-glow: rgba(0, 242, 255, 0.4);
+  background-color: #020617;
+  color: #f8fafc;
+  font-family: 'Inter', system-ui, sans-serif;
+  cursor: crosshair;
+}
+
+@layer base {
+  body {
+    @apply m-0 overflow-hidden antialiased;
+    background: radial-gradient(circle at 50% 50%, #0f172a 0%, #020617 100%);
+  }
+
+  .orbitron {
+    font-family: 'Orbitron', sans-serif;
+  }
+}
+
+@layer components {
+  /* Base Glass Widget Utility */
+  .glass-widget {
+    @apply bg-glass-bg backdrop-blur-2xl border border-glass-border rounded-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.8)];
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .glass-widget:hover {
+    @apply border-white/20 shadow-[0_0_30px_rgba(0,242,255,0.1)];
+  }
+
+  /* Hologram Card - Inline replacement of glass-widget styles to avoid Tailwind v4 apply error */
+  .hologram-card {
+    @apply bg-glass-bg backdrop-blur-2xl border border-neon-cyan/20 rounded-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.8)] relative overflow-hidden;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .hologram-card::after {
+    content: '';
+    @apply absolute inset-0 pointer-events-none;
+    background: linear-gradient(45deg, transparent 40%, rgba(0, 242, 255, 0.05) 50%, transparent 60%);
+    animation: scanline 4s linear infinite;
+  }
+
+  .neon-text {
+    @apply text-neon-cyan drop-shadow-[0_0_10px_rgba(0,242,255,0.6)];
+  }
+
+  .neon-btn {
+    @apply px-8 py-3 bg-neon-cyan/5 border border-neon-cyan/30 text-neon-cyan rounded-2xl
+           hover:bg-neon-cyan/15 hover:border-neon-cyan hover:scale-[1.02] active:scale-95
+           transition-all duration-300 uppercase tracking-[0.15em] text-xs font-black
+           flex items-center justify-center gap-3;
+  }
+
+  .status-tag {
+    @apply px-3 py-1 bg-white/5 rounded-full text-[10px] font-bold tracking-tighter border border-white/10 flex items-center gap-2;
+  }
+}
+
+/* Animations */
+@keyframes scanline {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 15px rgba(0, 242, 255, 0.3); }
+  50% { box-shadow: 0 0 25px rgba(0, 242, 255, 0.6); }
+}
+
+@keyframes floating {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.cursor-glow {
+  animation: pulse-glow 2s infinite;
+}
+
+.animate-float {
+  animation: floating 4s ease-in-out infinite;
+}
+
+/* Scrollbar Refinement */
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 242, 255, 0.3);
+}
+
+/* Scanning Overlay */
+.scan-overlay {
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.1),
+    rgba(0, 0, 0, 0.1) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  background-size: 100% 4px;
+}
