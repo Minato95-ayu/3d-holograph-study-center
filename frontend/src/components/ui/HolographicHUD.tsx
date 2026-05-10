@@ -3,7 +3,7 @@ import { useStudoStore } from '../../store/useStudoStore';
 import { wsService } from '../../lib/websocket';
 
 export const HolographicHUD: React.FC<{ videoRef: React.RefObject<HTMLVideoElement | null> }> = ({ videoRef }) => {
-  const { gestures, scene, knowledge, setKnowledge } = useStudoStore();
+  const { gestures, scene, knowledge, setKnowledge, cameraStatus, cameraError } = useStudoStore();
 
   const handleSearch = (customQuery?: string) => {
     const query = customQuery || "Spatial Computing"; 
@@ -43,8 +43,27 @@ export const HolographicHUD: React.FC<{ videoRef: React.RefObject<HTMLVideoEleme
 
           <div className="flex gap-3 pointer-events-auto">
             <div className="status-tag">
-              <span className={`w-2 h-2 rounded-full ${gestures.active ? 'bg-neon-cyan' : 'bg-red-500'}`} />
-              <span className="text-white/60">HAND: {gestures.active ? `${(gestures.confidence * 100).toFixed(0)}%` : 'OFFLINE'}</span>
+              {cameraStatus === 'loading' ? (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
+                  <span className="text-white/60">HAND: INIT...</span>
+                </>
+              ) : cameraStatus === 'error' ? (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-red-500" />
+                  <span className="text-red-400">HAND: ERROR</span>
+                </>
+              ) : cameraStatus === 'active' ? (
+                <>
+                  <span className={`w-2 h-2 rounded-full ${gestures.active ? 'bg-neon-cyan animate-pulse' : 'bg-neon-cyan/50'}`} />
+                  <span className="text-white/60">HAND: {gestures.active ? `${(gestures.confidence * 100).toFixed(0)}%` : 'READY'}</span>
+                </>
+              ) : (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-white/20" />
+                  <span className="text-white/40">HAND: OFFLINE</span>
+                </>
+              )}
             </div>
             <div className="status-tag">
               <span className="w-2 h-2 rounded-full bg-green-500" />
@@ -224,6 +243,33 @@ export const HolographicHUD: React.FC<{ videoRef: React.RefObject<HTMLVideoEleme
            </div>
         </div>
       </footer>
+
+      {/* Camera Error Toast */}
+      {cameraStatus === 'error' && cameraError && (
+        <div className="fixed top-36 left-1/2 -translate-x-1/2 z-50 animate-in fade-in zoom-in duration-500">
+          <div className="glass-widget border border-red-500/40 bg-red-500/10 px-6 py-4 flex items-start gap-4 max-w-md">
+            <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center shrink-0 mt-0.5">
+              <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest mb-1">Camera Access Failed</p>
+              <p className="text-xs text-white/60 leading-relaxed">{cameraError}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MediaPipe Loading Toast */}
+      {cameraStatus === 'loading' && (
+        <div className="fixed top-36 left-1/2 -translate-x-1/2 z-50 animate-in fade-in duration-500">
+          <div className="glass-widget border border-yellow-400/30 bg-yellow-400/5 px-6 py-3 flex items-center gap-4">
+            <div className="w-4 h-4 border-2 border-yellow-400/60 border-t-yellow-400 rounded-full animate-spin" />
+            <p className="text-[10px] font-bold text-yellow-400/80 uppercase tracking-widest">Initializing Hand Tracking...</p>
+          </div>
+        </div>
+      )}
 
       {/* Interactive Hand Cursor Feedback */}
       {gestures.active && gestures.handPosition && (

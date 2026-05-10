@@ -10,6 +10,11 @@ interface StudoState {
   };
   setGestures: (gestures: StudoState['gestures']) => void;
 
+  // Camera Status
+  cameraStatus: 'idle' | 'loading' | 'active' | 'error';
+  cameraError: string | null;
+  setCameraStatus: (status: StudoState['cameraStatus'], error?: string | null) => void;
+
   // Scene State
   scene: {
     modelLoaded: boolean;
@@ -42,6 +47,10 @@ export const useStudoStore = create<StudoState>((set) => ({
     handPosition: null,
   },
   setGestures: (gestures) => set({ gestures }),
+
+  cameraStatus: 'idle',
+  cameraError: null,
+  setCameraStatus: (status, error = null) => set({ cameraStatus: status, cameraError: error }),
 
   scene: {
     modelLoaded: false,
