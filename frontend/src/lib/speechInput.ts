@@ -1,0 +1,141 @@
+// Speech Input Engine — "Hey ARIO" detection and Action Commands
+
+type SpeechCallback = (transcript: string, isFinal: boolean) => void;
+type QueryCallback = (query: string) => void;
+type CommandCallback = (command: 'explode' | 'assemble' | 'stop_talking') => void;
+
+class SpeechInputEngine {
+  private recognition: any = null;
+  private isListening = false;
+  private wakeWord: string;
+  private supported: boolean;
+
+  public onTranscript: SpeechCallback | null = null;
+  public onWakeWord: (() => void) | null = null;
+  public onQuery: QueryCallback | null = null;
+  public onCommand: CommandCallback | null = null;
+  public onError: ((msg: string) => void) | null = null;
+  public onStatusChange: ((listening: boolean) => void) | null = null;
+
+  constructor(wakeWord = 'ario') {
+    this.wakeWord = wakeWord.toLowerCase();
+    const SR =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
+    this.supported = !!SR;
+
+    if (!this.supported) {
+      console.warn('⚠️ Speech Recognition not supported in this browser.');
+      return;
+    }
+
+    this.recognition = new SR();
+    this.recognition.continuous = true;
+    this.recognition.interimResults = true;
+    this.recognition.lang = 'en-US';
+    this.recognition.maxAlternatives = 1;
+
+    this.recognition.onresult = (event: any) => {
+      const result = event.results[event.results.length - 1];
+      const transcript = result[0].transcript.toLowerCase().trim();
+      const isFinal = result.isFinal;
+
+      this.onTranscript?.(transcript, isFinal);
+
+      if (isFinal) {
+        this.processTranscript(transcript);
+      }
+    };
+
+    this.recognition.onerror = (event: any) => {
+      if (event.error === 'no-speech') return; // normal silence
+      if (event.error === 'aborted') return; // intentional stop
+      console.error('🎤 Speech error:', event.error);
+      this.onError?.(event.error);
+    };
+
+    this.recognition.onend = () => {
+      // Auto-restart if still should be listening
+      if (this.isListening) {
+        setTimeout(() => {
+          try {
+            this.recognition?.start();
+          } catch (_) {}
+        }, 300);
+      }
+    };
+  }
+
+  private processTranscript(transcript: string) {
+    if (transcript.includes(this.wakeWord)) {
+      this.onWakeWord?.();
+      
+      const textAfterWake = transcript.split(this.wakeWord)[1]?.trim() || '';
+      console.log(`🤖 ARIO activated! Heard: "${textAfterWake}"`);
+
+      // 1. Check for Action Commands
+      if (textAfterWake.includes('explode') || textAfterWake.includes('open model') || textAfterWake.includes('kholo')) {
+        this.onCommand?.('explode');
+        return;
+      }
+      if (textAfterWake.includes('assemble') || textAfterWake.includes('close model') || textAfterWake.includes('reset') || textAfterWake.includes('band karo')) {
+        this.onCommand?.('assemble');
+        return;
+      }
+      if (textAfterWake.includes('stop') || textAfterWake.includes('quiet') || textAfterWake.includes('chup')) {
+        this.onCommand?.('stop_talking');
+        return;
+      }
+
+      // 2. Otherwise, treat it as a Search Query
+      const regex = new RegExp(
+        `(show me|tell me|explain|load|what is|dikhao|batao|search for)?[,\\s]*`,
+        'i'
+      );
+      const query = textAfterWake.replace(regex, '').trim();
+
+      if (query.length > 1) {
+        this.onQuery?.(query);
+      }
+    }
+  }
+
+  get isSupported() {
+    return this.supported;
+  }
+
+  get active() {
+    return this.isListening;
+  }
+
+  start() {
+    if (!this.supported || this.isListening) return;
+    try {
+      this.isListening = true;
+      this.recognition.start();
+      this.onStatusChange?.(true);
+      console.log('🎤 ARIO listening for wake word "Hey ARIO"...');
+    } catch (e) {
+      console.error('Speech start error:', e);
+    }
+  }
+
+  stop() {
+    if (!this.supported) return;
+    this.isListening = false;
+    try {
+      this.recognition.stop();
+    } catch (_) {}
+    this.onStatusChange?.(false);
+  }
+
+  toggle() {
+    if (this.isListening) {
+      this.stop();
+    } else {
+      this.start();
+    }
+  }
+}
+
+export const speechInput = new SpeechInputEngine('ario');

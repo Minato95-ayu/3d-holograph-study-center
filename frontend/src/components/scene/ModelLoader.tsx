@@ -42,11 +42,6 @@ export const ModelLoader: React.FC<ModelLoaderProps> = ({ modelPath }) => {
            const targetScale = 1.5 + (1 - gestures.confidence) * 2; // Simple scale mapping
            groupRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.1);
         }
-
-        // SPREAD -> Explode
-        if (gestures.type === 'SPREAD' && !scene.isExploded) {
-           setScene({ isExploded: true });
-        }
       } else {
         // Auto-rotation if no hand
         groupRef.current.rotation.y += 0.002;

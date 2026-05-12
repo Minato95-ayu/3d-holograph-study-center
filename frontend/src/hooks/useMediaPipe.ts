@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { HandLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 import { useStudoStore } from '../store/useStudoStore';
 import { wsService } from '../lib/websocket';
-import { gestureEngine } from '../lib/gestureEngine';
+import { GestureEngine } from '../lib/gestureEngine';
 
 export const useMediaPipe = () => {
   const setGestures = useStudoStore((state) => state.setGestures);
@@ -89,7 +89,7 @@ export const useMediaPipe = () => {
 
         if (results.landmarks && results.landmarks.length > 0) {
           const mainHand = results.landmarks[0];
-          const analysis = gestureEngine.analyze(mainHand);
+          const analysis = GestureEngine.analyze(mainHand);
 
           setGestures({
             active: true,
