@@ -35,6 +35,11 @@ interface StudoState {
     domain: string;
     loading: boolean;
     ario_intro: string;
+    experiment: {
+      shape: string | null;
+      calculations: Record<string, number> | null;
+      glb_base64: string | null;
+    } | null;
   };
   setKnowledge: (knowledge: Partial<StudoState['knowledge']>) => void;
 
@@ -85,6 +90,7 @@ export const useStudoStore = create<StudoState>((set) => ({
     domain: 'general',
     loading: false,
     ario_intro: '',
+    experiment: null,
   },
   setKnowledge: (knowledge) => set((state) => ({ knowledge: { ...state.knowledge, ...knowledge } })),
 

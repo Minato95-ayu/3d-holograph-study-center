@@ -1,5 +1,5 @@
 // ARIO — AI Voice Engine for STUDO Spatial OS
-// Tony Stark FRIDAY-style voice assistant
+// Tony Stark FRIDAY-style voice assistant (Edge TTS Backend)
 
 export type ArioState = 'idle' | 'listening' | 'thinking' | 'speaking';
 
@@ -10,32 +10,13 @@ interface ArioCallbacks {
 }
 
 class ArioEngine {
-  private synth: SpeechSynthesis;
-  private voices: SpeechSynthesisVoice[] = [];
-  private selectedVoice: SpeechSynthesisVoice | null = null;
   private queue: string[] = [];
   private isSpeaking = false;
   private callbacks: ArioCallbacks = {};
   private _state: ArioState = 'idle';
+  private currentAudio: HTMLAudioElement | null = null;
 
-  constructor() {
-    this.synth = window.speechSynthesis;
-    this.loadVoices();
-    if (speechSynthesis.onvoiceschanged !== undefined) {
-      speechSynthesis.onvoiceschanged = () => this.loadVoices();
-    }
-  }
-
-  private loadVoices() {
-    this.voices = this.synth.getVoices();
-    // Prefer Google US English voices (best quality in browser)
-    this.selectedVoice =
-      this.voices.find((v) => v.name === 'Google US English') ||
-      this.voices.find((v) => v.name.includes('Google') && v.lang === 'en-US') ||
-      this.voices.find((v) => v.lang === 'en-US') ||
-      this.voices.find((v) => v.lang.startsWith('en')) ||
-      null;
-  }
+  constructor() {}
 
   private setState(state: ArioState) {
     this._state = state;
@@ -48,6 +29,31 @@ class ArioEngine {
 
   onCallbacks(callbacks: ArioCallbacks) {
     this.callbacks = callbacks;
+  }
+
+  // Play audio directly from base64 (used by ario_chat)
+  playBase64(base64Audio: string, text: string) {
+    this.stop();
+    
+    this.isSpeaking = true;
+    this.setState('speaking');
+    this.callbacks.onSpeakStart?.(text);
+    
+    const audioUrl = `data:audio/mpeg;base64,${base64Audio}`;
+    this.currentAudio = new Audio(audioUrl);
+    
+    this.currentAudio.onended = () => {
+      this.isSpeaking = false;
+      this.setState('idle');
+      this.callbacks.onSpeakEnd?.();
+    };
+    
+    this.currentAudio.play().catch(e => {
+      console.error("Audio playback error:", e);
+      this.isSpeaking = false;
+      this.setState('idle');
+      this.callbacks.onSpeakEnd?.();
+    });
   }
 
   // Speak text — priority=true interrupts current speech
@@ -65,16 +71,14 @@ class ArioEngine {
     if (!cleanText) return;
 
     if (priority) {
-      this.synth.cancel();
-      this.queue = [];
-      this.isSpeaking = false;
+      this.stop();
     }
 
     this.queue.push(cleanText);
     if (!this.isSpeaking) this.processQueue();
   }
 
-  private processQueue() {
+  private async processQueue() {
     if (this.queue.length === 0) {
       this.isSpeaking = false;
       this.setState('idle');
@@ -87,33 +91,30 @@ class ArioEngine {
     this.setState('speaking');
     this.callbacks.onSpeakStart?.(text);
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    if (this.selectedVoice) utterance.voice = this.selectedVoice;
-    utterance.rate = 0.92;
-    utterance.pitch = 0.95;
-    utterance.volume = 1.0;
-
-    utterance.onend = () => this.processQueue();
-    utterance.onerror = () => this.processQueue();
-
-    this.synth.speak(utterance);
+    try {
+      const url = `${import.meta.env.VITE_WS_URL || 'http://localhost:8000'}/api/tts?text=${encodeURIComponent(text)}`;
+      this.currentAudio = new Audio(url);
+      
+      this.currentAudio.onended = () => this.processQueue();
+      this.currentAudio.onerror = () => this.processQueue();
+      
+      await this.currentAudio.play();
+    } catch (e) {
+      console.error('Failed to play ARIO audio:', e);
+      this.processQueue(); // skip to next
+    }
   }
 
   stop() {
-    this.synth.cancel();
+    if (this.currentAudio) {
+      this.currentAudio.pause();
+      this.currentAudio.currentTime = 0;
+      this.currentAudio = null;
+    }
     this.queue = [];
     this.isSpeaking = false;
     this.setState('idle');
     this.callbacks.onSpeakEnd?.();
-  }
-
-  getVoices() {
-    return this.voices.filter((v) => v.lang.startsWith('en'));
-  }
-
-  setVoice(name: string) {
-    const voice = this.voices.find((v) => v.name === name);
-    if (voice) this.selectedVoice = voice;
   }
 
   // ARIO greeting messages by context

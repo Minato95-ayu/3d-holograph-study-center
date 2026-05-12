@@ -7,3 +7,10 @@ python-dotenv
 openai
 wikipedia-api
 pydantic
+sympy
+trimesh
+networkx
+scipy
+edge-tts
+groq
+python-dotenv

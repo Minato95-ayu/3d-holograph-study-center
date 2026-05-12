@@ -13,6 +13,7 @@ class SpeechInputEngine {
   public onTranscript: SpeechCallback | null = null;
   public onWakeWord: (() => void) | null = null;
   public onQuery: QueryCallback | null = null;
+  public onChat: ((text: string) => void) | null = null;
   public onCommand: CommandCallback | null = null;
   public onError: ((msg: string) => void) | null = null;
   public onStatusChange: ((listening: boolean) => void) | null = null;
@@ -87,15 +88,19 @@ class SpeechInputEngine {
         return;
       }
 
-      // 2. Otherwise, treat it as a Search Query
-      const regex = new RegExp(
-        `(show me|tell me|explain|load|what is|dikhao|batao|search for)?[,\\s]*`,
+      // 2. Otherwise, check if it's a Search Query or General Chat
+      const searchRegex = new RegExp(
+        `^(show me|tell me about|explain|load|what is|dikhao|batao|search for)\\s+(.+)`,
         'i'
       );
-      const query = textAfterWake.replace(regex, '').trim();
-
-      if (query.length > 1) {
-        this.onQuery?.(query);
+      
+      const match = textAfterWake.match(searchRegex);
+      if (match && match[2]) {
+        // It's a search query
+        this.onQuery?.(match[2].trim());
+      } else if (textAfterWake.length > 1) {
+        // It's a conversational chat
+        this.onChat?.(textAfterWake);
       }
     }
   }

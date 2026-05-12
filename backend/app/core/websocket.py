@@ -87,3 +87,60 @@ async def handle_explode(sid, data):
         }, to=sid)
     except Exception as e:
         await safe_emit_error(sid, str(e))
+
+from ..services.simulation import simulation_service
+from ..services.generative3d import generative_3d_service
+
+@sio.on("run_experiment")
+async def handle_experiment(sid, data):
+    try:
+        shape_type = data.get("shape", "sphere")
+        params = data.get("params", {})
+        
+        logger.info(f"🧪 Running experiment from {sid} for {shape_type}")
+        
+        # 1. Calculate physics/math
+        sim_result = simulation_service.run_experiment(shape_type, params)
+        
+        # 2. Generate 3D Model
+        model_result = generative_3d_service.generate_shape(shape_type, params)
+        
+        if sim_result["success"] and model_result["success"]:
+            await sio.emit("experiment_result", {
+                "shape": shape_type,
+                "calculations": sim_result["calculations"],
+                "glb_base64": model_result["glb_base64"]
+            }, to=sid)
+        else:
+            error_msg = sim_result.get("error", "") + " " + model_result.get("error", "")
+            await safe_emit_error(sid, error_msg)
+
+    except Exception as e:
+        logger.error(f"❌ Experiment error: {str(e)}")
+        await safe_emit_error(sid, str(e))
+
+from ..services.ario_voice import ario_voice_service
+
+@sio.on("ario_chat")
+async def handle_chat(sid, data):
+    try:
+        text = data.get("text", "").strip()
+        if not text:
+            return
+            
+        logger.info(f"🗣️ User Chat from {sid}: '{text}'")
+        
+        # Process chat (LLM + TTS)
+        response = await ario_voice_service.process_chat(text)
+        
+        if response["success"]:
+            await sio.emit("ario_chat_response", {
+                "text": response["text"],
+                "audio_base64": response["audio_base64"]
+            }, to=sid)
+        else:
+            await safe_emit_error(sid, "Failed to generate voice response.")
+            
+    except Exception as e:
+        logger.error(f"❌ Chat error: {str(e)}")
+        await safe_emit_error(sid, str(e))

@@ -2,13 +2,13 @@ import { io, Socket } from 'socket.io-client';
 
 class WebSocketService {
   private socket: Socket | null = null;
-  private reconnectAttempts = 0;
   private readonly MAX_RECONNECT_ATTEMPTS = 5;
 
   connect() {
     if (this.socket?.connected) return this.socket;
 
-    this.socket = io("http://localhost:8888", {
+    const wsUrl = import.meta.env.VITE_WS_URL || "http://localhost:8000";
+    this.socket = io(wsUrl, {
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionAttempts: this.MAX_RECONNECT_ATTEMPTS,
@@ -17,7 +17,6 @@ class WebSocketService {
 
     this.socket.on("connect", () => {
       console.log("🟢 Connected to Studo AI Brain");
-      this.reconnectAttempts = 0;
     });
 
     this.socket.on("connect_error", (err) => {

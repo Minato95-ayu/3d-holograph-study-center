@@ -29,12 +29,17 @@ const App: React.FC = () => {
       ario.greet();
     }, 2000);
 
-    // Setup voice input (speech recognition)
     speechInput.onQuery = (query) => {
       console.log('🎤 ARIO heard search:', query);
       setKnowledge({ loading: true, query });
       setArio({ state: 'thinking' });
       wsService.emit('search', { query });
+    };
+
+    speechInput.onChat = (text) => {
+      console.log('🎤 ARIO heard chat:', text);
+      setArio({ state: 'thinking' });
+      wsService.emit('ario_chat', { text });
     };
 
     speechInput.onCommand = (command) => {
@@ -130,6 +135,38 @@ const App: React.FC = () => {
     };
 
     socket.on('search_result', handleSearchResult);
+
+    socket.on('experiment_result', (data: any) => {
+      console.log('🧪 Experiment Result:', data);
+      
+      // Update knowledge state with experiment data
+      setKnowledge({
+        query: `Experiment: ${data.shape}`,
+        title: `${data.shape.toUpperCase()} SIMULATION`,
+        summary: `Running real-time physics and mathematics simulation for ${data.shape}. Generating mathematically accurate 3D model.`,
+        domain: 'physics',
+        loading: false,
+        experiment: {
+          shape: data.shape,
+          calculations: data.calculations,
+          glb_base64: data.glb_base64
+        }
+      });
+
+      // Switch scene to generative GLTF
+      setScene({
+        hologramType: 'gltf',
+        currentModel: `data:model/gltf-binary;base64,${data.glb_base64}`,
+        isExploded: false
+      });
+
+      ario.speak(`Physics calculation complete. Rendering generated ${data.shape} model based on mathematical parameters.`, true);
+    });
+
+    socket.on('ario_chat_response', (data: any) => {
+      console.log('🤖 ARIO Chat Response received.');
+      ario.playBase64(data.audio_base64, data.text);
+    });
 
     return () => {
       speechInput.stop();

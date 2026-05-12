@@ -95,14 +95,14 @@ export const useMediaPipe = () => {
             active: true,
             type: analysis.type,
             confidence: analysis.confidence,
-            handPosition: analysis.center,
+            handPosition: analysis.position,
           });
 
           // Throttle socket emit to 20fps
           if (startTimeMs - lastEmitTime > 50) {
             wsService.emit('gesture_data', {
               gesture: analysis.type,
-              position: analysis.center,
+              position: analysis.position,
               confidence: analysis.confidence,
             });
             lastEmitTime = startTimeMs;

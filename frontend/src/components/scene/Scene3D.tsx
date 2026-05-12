@@ -74,7 +74,7 @@ export const Scene3D = () => {
             resolution={256} color="#000000"
           />
 
-          <EffectComposer disableNormalPass>
+          <EffectComposer>
             <Bloom
               intensity={scene.hologramType === 'molecule' ? 2.5 : 1.5}
               luminanceThreshold={0.1}
@@ -84,13 +84,12 @@ export const Scene3D = () => {
             <ChromaticAberration offset={new Vector2(0.002, 0.002)} />
             <Scanline opacity={0.08} />
             <Noise opacity={0.04} />
-            {scene.isExploded && (
-              <Glitch
-                delay={new Vector2(1.5, 3.5)}
-                duration={new Vector2(0.1, 0.3)}
-                strength={new Vector2(0.1, 0.3)}
-              />
-            )}
+            <Glitch
+              active={scene.isExploded}
+              delay={new Vector2(1.5, 3.5)}
+              duration={new Vector2(0.1, 0.3)}
+              strength={new Vector2(0.1, 0.3)}
+            />
           </EffectComposer>
         </Suspense>
       </Canvas>

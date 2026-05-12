@@ -24,7 +24,7 @@ export const HolographicHUD: React.FC<{ videoRef: React.RefObject<HTMLVideoEleme
     <div className="fixed inset-0 pointer-events-none z-10 flex flex-col p-10 font-sans">
 
       {/* Camera Feed */}
-      <div className="fixed bottom-10 right-10 w-48 h-32 glass-widget overflow-hidden pointer-events-auto border-neon-cyan/30 shadow-[0_0_20px_rgba(0,242,255,0.2)] group hover:w-64 hover:h-48 transition-all">
+      <div className="fixed top-[100px] right-10 z-50 w-48 h-32 glass-widget overflow-hidden pointer-events-auto border-neon-cyan/30 shadow-[0_0_20px_rgba(0,242,255,0.2)] group hover:w-64 hover:h-48 transition-all">
         <video ref={videoRef} className="w-full h-full object-cover scale-x-[-1] opacity-60 group-hover:opacity-100 transition-opacity" autoPlay playsInline muted />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
         <div className="absolute bottom-2 left-3 flex items-center gap-2">
@@ -133,6 +133,16 @@ export const HolographicHUD: React.FC<{ videoRef: React.RefObject<HTMLVideoEleme
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
                 {scene.isExploded ? 'Reassemble' : 'Explode View'}
               </button>
+
+              <button
+                onClick={() => {
+                  setKnowledge({ loading: true, query: 'Running Math Simulation' });
+                  wsService.emit('run_experiment', { shape: 'sphere', params: { radius: 2.0, density: 7850 } });
+                }}
+                className="w-full bg-orange-500/10 border border-orange-500/40 text-orange-400 py-3 rounded-xl hover:bg-orange-500/20 transition-all font-bold tracking-widest text-[10px] uppercase flex justify-center items-center gap-2 mt-2"
+              >
+                <span>🧪</span> Run Physics Experiment
+              </button>
             </div>
           </div>
         </aside>
@@ -193,7 +203,7 @@ export const HolographicHUD: React.FC<{ videoRef: React.RefObject<HTMLVideoEleme
               </p>
 
               {/* Formulas Section */}
-              {knowledge.formulas.length > 0 && (
+              {knowledge.formulas && knowledge.formulas.length > 0 && (
                 <div className="mb-4">
                   <h3 className="text-[9px] font-bold text-neon-cyan uppercase tracking-widest mb-2 flex items-center gap-2">
                     <span>⚡</span> Key Formulas
@@ -208,8 +218,25 @@ export const HolographicHUD: React.FC<{ videoRef: React.RefObject<HTMLVideoEleme
                 </div>
               )}
 
+              {/* Experiment Calculations */}
+              {knowledge.experiment && knowledge.experiment.calculations && (
+                <div className="mb-4">
+                  <h3 className="text-[9px] font-bold text-orange-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                    <span>🧮</span> Math & Physics Calculations
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {Object.entries(knowledge.experiment.calculations).map(([key, value]) => (
+                      <div key={key} className="bg-orange-500/5 border border-orange-500/20 rounded-lg p-3">
+                        <span className="block text-[8px] text-white/50 uppercase tracking-wider mb-1">{key}</span>
+                        <span className="text-orange-400 font-mono text-sm font-bold">{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Components Section */}
-              {knowledge.components.length > 0 && (
+              {knowledge.components && knowledge.components.length > 0 && (
                 <div className="mb-4">
                   <h3 className="text-[9px] font-bold text-purple-400 uppercase tracking-widest mb-2 flex items-center gap-2">
                     <span>🔩</span> Key Components
