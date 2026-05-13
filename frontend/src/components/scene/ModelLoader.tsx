@@ -41,11 +41,15 @@ export const ModelLoader: React.FC<ModelLoaderProps> = ({ modelPath }) => {
         if (gestures.type === 'PINCH') {
            const targetScale = 1.5 + (1 - gestures.confidence) * 2; // Simple scale mapping
            groupRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.1);
+        } else {
+           // Revert to normal scale if not pinching
+           groupRef.current.scale.lerp(new THREE.Vector3(1.5, 1.5, 1.5), 0.1);
         }
       } else {
         // Auto-rotation if no hand
         groupRef.current.rotation.y += 0.002;
         prevPos.current = null;
+        groupRef.current.scale.lerp(new THREE.Vector3(1.5, 1.5, 1.5), 0.1);
       }
 
       // 2. Gentle floating animation

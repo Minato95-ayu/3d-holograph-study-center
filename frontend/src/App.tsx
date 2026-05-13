@@ -153,14 +153,28 @@ const App: React.FC = () => {
         }
       });
 
-      // Switch scene to generative GLTF
-      setScene({
-        hologramType: 'gltf',
-        currentModel: `data:model/gltf-binary;base64,${data.glb_base64}`,
-        isExploded: false
-      });
+      // Convert base64 to Blob URL
+      try {
+        const byteCharacters = atob(data.glb_base64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'model/gltf-binary' });
+        const blobUrl = URL.createObjectURL(blob);
 
-      ario.speak(`Physics calculation complete. Rendering generated ${data.shape} model based on mathematical parameters.`, true);
+        // Switch scene to generative GLTF
+        setScene({
+          hologramType: 'gltf',
+          currentModel: blobUrl,
+          isExploded: false
+        });
+        
+        ario.speak(`Physics calculation complete. Rendering generated ${data.shape} model based on mathematical parameters.`, true);
+      } catch (err) {
+        console.error("Error generating blob url from base64", err);
+      }
     });
 
     socket.on('ario_chat_response', (data: any) => {
@@ -179,15 +193,15 @@ const App: React.FC = () => {
       {/* 3D Background */}
       <Scene3D />
 
-      {/* UI Overlay */}
-      <HolographicHUD videoRef={videoRef} />
-
       {/* Premium Overlays */}
       <div className="fixed inset-0 pointer-events-none z-[1]">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,transparent_0%,rgba(2,6,23,0.7)_100%)]" />
         <div className="absolute inset-0 opacity-[0.02] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay" />
         <div className="absolute inset-0 scan-overlay opacity-[0.05]" />
       </div>
+
+      {/* UI Overlay */}
+      <HolographicHUD videoRef={videoRef} />
     </div>
   );
 };

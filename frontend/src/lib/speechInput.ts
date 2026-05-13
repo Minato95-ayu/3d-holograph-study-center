@@ -68,11 +68,15 @@ class SpeechInputEngine {
   }
 
   private processTranscript(transcript: string) {
-    if (transcript.includes(this.wakeWord)) {
+    // Also accept 'hello' as a wake word just in case they don't say Ario
+    const wakeWords = [this.wakeWord, 'areo', 'mario', 'audio', 'jarvis', 'computer', 'hello'];
+    const foundWakeWord = wakeWords.find(w => transcript.includes(w));
+
+    if (foundWakeWord) {
       this.onWakeWord?.();
       
-      const textAfterWake = transcript.split(this.wakeWord)[1]?.trim() || '';
-      console.log(`🤖 ARIO activated! Heard: "${textAfterWake}"`);
+      const textAfterWake = transcript.split(foundWakeWord)[1]?.trim() || '';
+      console.log(`🤖 ARIO activated via '${foundWakeWord}'! Heard: "${textAfterWake}"`);
 
       // 1. Check for Action Commands
       if (textAfterWake.includes('explode') || textAfterWake.includes('open model') || textAfterWake.includes('kholo')) {
@@ -101,6 +105,9 @@ class SpeechInputEngine {
       } else if (textAfterWake.length > 1) {
         // It's a conversational chat
         this.onChat?.(textAfterWake);
+      } else {
+        // If they just said "Hello" or "Ario" with nothing else
+        this.onChat?.("Hello ARIO");
       }
     }
   }
@@ -114,14 +121,22 @@ class SpeechInputEngine {
   }
 
   start() {
-    if (!this.supported || this.isListening) return;
+    if (!this.supported) {
+      alert("❌ Speech Recognition is not supported in this browser. Please use Google Chrome.");
+      return;
+    }
+    if (this.isListening) return;
+    
     try {
       this.isListening = true;
       this.recognition.start();
       this.onStatusChange?.(true);
       console.log('🎤 ARIO listening for wake word "Hey ARIO"...');
-    } catch (e) {
+    } catch (e: any) {
       console.error('Speech start error:', e);
+      alert(`❌ Microphone error: ${e.message || 'Check browser permissions'}`);
+      this.isListening = false;
+      this.onStatusChange?.(false);
     }
   }
 
@@ -135,6 +150,10 @@ class SpeechInputEngine {
   }
 
   toggle() {
+    if (!this.supported) {
+      alert("❌ Speech Recognition is not supported in this browser. Please use Google Chrome.");
+      return;
+    }
     if (this.isListening) {
       this.stop();
     } else {
