@@ -129,14 +129,24 @@ const FALLBACK_EXPLANATIONS: Record<string, Explanation> = {
 export async function getExplanation(topic: string, context?: string): Promise<Explanation> {
   const normalizedTopic = topic.toLowerCase().trim();
 
+  // 1. Check cache first
+  const cached = getCached(normalizedTopic);
+  if (cached) {
+    console.log(`📦 Using cached explanation for: "${normalizedTopic}"`);
+    return cached;
+  }
+
   console.log(`📚 Fetching explanation for: "${normalizedTopic}"`);
 
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  let explanation: Explanation;
 
-  // Try Gemini API if key is available
+  // 2. Try Gemini API if key is available
   if (apiKey) {
     try {
-      return await fetchFromGemini(normalizedTopic, context, apiKey);
+      explanation = await fetchFromGemini(normalizedTopic, context, apiKey);
+      setCached(normalizedTopic, explanation);
+      return explanation;
     } catch (error) {
       console.warn(`⚠️ Gemini API failed, using fallback:`, error);
     }
@@ -144,8 +154,9 @@ export async function getExplanation(topic: string, context?: string): Promise<E
     console.warn('⚠️ Gemini API key not configured');
   }
 
-  // Return fallback explanation
-  return getFallbackExplanation(normalizedTopic);
+  // 3. Return fallback explanation
+  explanation = getFallbackExplanation(normalizedTopic);
+  return explanation;
 }
 
 /**

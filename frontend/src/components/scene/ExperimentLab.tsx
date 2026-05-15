@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { useStudoStore } from '../../store/useStudoStore';
 
 export const ExperimentLab: React.FC = () => {
   const mountRef = useRef<HTMLDivElement>(null);
@@ -39,7 +38,7 @@ export const ExperimentLab: React.FC = () => {
     renderer.setSize(width, height);
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFShadowShadowMap;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     mountRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 

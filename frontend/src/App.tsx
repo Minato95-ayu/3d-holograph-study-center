@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Scene3D } from './components/scene/Scene3D';
 import { HolographicHUD } from './components/ui/HolographicHUD';
 import { ExperimentLab } from './components/scene/ExperimentLab';
-import { ResultsPanel, ResultsData } from './components/ui/ResultsPanel';
+import { ResultsPanel, type ResultsData } from './components/ui/ResultsPanel';
 import { useMediaPipe } from './hooks/useMediaPipe';
 import { wsService } from './lib/websocket';
 import { useStudoStore } from './store/useStudoStore';
@@ -21,7 +21,7 @@ const App: React.FC = () => {
   // ARIA Lab demo states
   const [demoMode, setDemoMode] = useState(true); // Start in demo mode for judges
   const [results, setResults] = useState<ResultsData | null>(null);
-  const [isSimulating, setIsSimulating] = useState(false);
+  const [, setIsSimulating] = useState(false);
 
   useEffect(() => {
     const socket = wsService.connect();

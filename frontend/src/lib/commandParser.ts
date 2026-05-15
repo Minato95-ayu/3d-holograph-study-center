@@ -48,25 +48,8 @@ const COMMAND_PATTERNS: Record<CommandVerb, RegExp> = {
   help: /(?:help|what\s+can\s+you\s+do|how\s+do\s+i|guide)/i,
 };
 
-/**
- * Known experiment objects
- */
-const KNOWN_OBJECTS = new Set([
-  'engine',
-  'car engine',
-  'piston',
-  'cylinder',
-  'crankshaft',
-  'valve',
-  'turbo',
-  'valve-inlet',
-  'valve-exhaust',
-  'heart',
-  'molecule',
-  'dna',
-  'circuit',
-  'rocket',
-]);
+// Known experiment objects defined in COMMAND_PATTERNS
+
 
 /**
  * Parse voice input into a structured command
