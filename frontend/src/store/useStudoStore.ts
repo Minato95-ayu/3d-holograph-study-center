@@ -21,6 +21,7 @@ interface StudoState {
     currentModel: string | null;
     isExploded: boolean;
     hologramType: 'gltf' | 'molecule' | 'dna' | 'atom' | 'solar_system' | 'default';
+    level: 'organism' | 'system' | 'organ' | 'tissue' | 'cell';
   };
   setScene: (scene: Partial<StudoState['scene']>) => void;
 
@@ -48,6 +49,7 @@ interface StudoState {
     state: 'idle' | 'listening' | 'thinking' | 'speaking';
     currentText: string | null;
     micActive: boolean;
+    language: 'en' | 'hi' | 'hinglish';
   };
   setArio: (ario: Partial<StudoState['ario']>) => void;
 
@@ -77,6 +79,7 @@ export const useStudoStore = create<StudoState>((set) => ({
     currentModel: null,
     isExploded: false,
     hologramType: 'default',
+    level: 'system',
   },
   setScene: (scene) => set((state) => ({ scene: { ...state.scene, ...scene } })),
 
@@ -98,6 +101,7 @@ export const useStudoStore = create<StudoState>((set) => ({
     state: 'idle',
     currentText: null,
     micActive: false,
+    language: 'en',
   },
   setArio: (ario) => set((state) => ({ ario: { ...state.ario, ...ario } })),
 

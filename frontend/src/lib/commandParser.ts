@@ -16,6 +16,7 @@ export type CommandVerb =
   | 'explain'
   | 'compare'
   | 'help'
+  | 'level'
   | 'stop';
 
 export interface Command {
@@ -34,18 +35,19 @@ export interface Command {
  * Ordered by likelihood of use
  */
 const COMMAND_PATTERNS: Record<CommandVerb, RegExp> = {
-  show: /(?:show|display|reveal|bring.*up)\s+(?:me\s+)?(?:a\s+)?(?:the\s+)?(\w+)/i,
-  explain: /(?:explain|tell\s+me|describe|what\s+is)\s+(?:the\s+)?(\w+)/i,
-  zoom: /zoom\s+(?:in(?:to)?|out|to)\s+(?:the\s+)?(\w+)?/i,
-  rotate: /rotate\s+(?:the\s+engine\s+)?(\w+)?\s*(?:left|right)?/i,
-  run: /(?:run|start|execute|begin)\s+(?:the\s+)?(?:simulation|experiment|test)/i,
-  add: /add\s+(?:a\s+)?(?:the\s+)?(\w+)/i,
-  remove: /(?:remove|delete|detach|take\s+out)\s+(?:the\s+)?(\w+)/i,
-  reset: /(?:reset|restart|clear|restart\s+the\s+lab)/i,
-  save: /(?:save|store|export)\s+(?:the\s+)?(?:results|data|experiment)?/i,
-  compare: /(?:compare|compare\s+with|versus)\s+(?:the\s+)?(\w+)?/i,
-  stop: /(?:stop|pause|halt|cancel)/i,
-  help: /(?:help|what\s+can\s+you\s+do|how\s+do\s+i|guide)/i,
+  show: /(?:show|display|reveal|bring.*up|dikhao|dekhao|dikhao me)\s+(?:me\s+)?(?:a\s+)?(?:the\s+)?([\w\s]+)/i,
+  explain: /(?:explain|tell\s+me|describe|what\s+is|samjhao|batao|kya\s+hai)\s+(?:the\s+)?([\w\s]+)/i,
+  zoom: /(?:zoom|ander\s+jao|baahar\s+aao|zoom\s+karo)\s+(?:in(?:to)?|out|to)\s+(?:the\s+)?([\w\s]+)?/i,
+  rotate: /(?:rotate|ghumao|ghuma\s+do)\s+(?:the\s+engine\s+)?([\w\s]+)?\s*(?:left|right)?/i,
+  run: /(?:run|start|execute|begin|shuru\s+karo|chalao)\s+(?:the\s+)?(?:simulation|experiment|test)/i,
+  add: /(?:add|jodo|lagao)\s+(?:a\s+)?(?:the\s+)?([\w\s]+)/i,
+  remove: /(?:remove|delete|detach|take\s+out|hatao|nikalo)\s+(?:the\s+)?([\w\s]+)/i,
+  reset: /(?:reset|restart|clear|dubara\s+shuru|saaf\s+karo)/i,
+  save: /(?:save|store|export|mehfooz|surakshit)\s+(?:the\s+)?(?:results|data|experiment)?/i,
+  compare: /(?:compare|compare\s+with|versus|muqabla|tulna)\s+(?:the\s+)?([\w\s]+)?/i,
+  level: /(?:go\s+to|change\s+to|switch\s+to)\s+(cell|tissue|organ|system|organism)\s+(?:level)?/i,
+  stop: /(?:stop|pause|halt|cancel|ruko|bas)/i,
+  help: /(?:help|what\s+can\s+you\s+do|how\s+do\s+i|guide|madad)/i,
 };
 
 // Known experiment objects defined in COMMAND_PATTERNS
@@ -176,6 +178,7 @@ export async function executeCommand(
     onReset?: () => void;
     onSave?: () => void;
     onCompare?: () => void;
+    onLevel?: (level: string) => void;
     onStop?: () => void;
   }
 ): Promise<void> {
@@ -220,6 +223,10 @@ export async function executeCommand(
 
     case 'compare':
       callbacks.onCompare?.();
+      break;
+
+    case 'level':
+      callbacks.onLevel?.(command.object || 'system');
       break;
 
     case 'stop':

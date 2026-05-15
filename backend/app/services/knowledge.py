@@ -8,25 +8,28 @@ logger = logging.getLogger("studo-knowledge")
 # Domain-specific formula databases
 FORMULA_DB = {
     # Physics
-    "energy": ["E = mc²", "E = hf", "KE = ½mv²"],
-    "force": ["F = ma", "F = G(m₁m₂)/r²", "F = qvB"],
-    "motion": ["v = u + at", "s = ut + ½at²", "v² = u² + 2as"],
-    "wave": ["v = fλ", "E = hf", "c = 3×10⁸ m/s"],
-    "electricity": ["V = IR", "P = IV", "Q = CV"],
-    "quantum": ["E = hf", "λ = h/mv", "ΔxΔp ≥ ℏ/2"],
+    "energy": ["E = mc²", "E = hf", "KE = ½mv²", "PE = mgh"],
+    "force": ["F = ma", "F = G(m₁m₂)/r²", "F = qvB", "τ = rF sinθ"],
+    "motion": ["v = u + at", "s = ut + ½at²", "v² = u² + 2as", "p = mv"],
+    "wave": ["v = fλ", "E = hf", "c = 3×10⁸ m/s", "n = c/v"],
+    "electricity": ["V = IR", "P = IV", "Q = CV", "F = k(q₁q₂)/r²"],
+    "quantum": ["E = hf", "λ = h/mv", "ΔxΔp ≥ ℏ/2", "iℏ∂/∂t Ψ = ĤΨ"],
+    "thermodynamics": ["ΔU = Q - W", "PV = nRT", "S = k lnW"],
     # Chemistry
-    "water": ["2H₂ + O₂ → 2H₂O", "H₂O → H⁺ + OH⁻"],
+    "water": ["2H₂ + O₂ → 2H₂O", "H₂O → H⁺ + OH⁻", "Kw = [H⁺][OH⁻] = 10⁻¹⁴"],
     "photosynthesis": ["6CO₂ + 6H₂O + light → C₆H₁₂O₆ + 6O₂"],
     "respiration": ["C₆H₁₂O₆ + 6O₂ → 6CO₂ + 6H₂O + ATP"],
-    "dna": ["A=T (2H bonds)", "G≡C (3H bonds)", "Chargaff: A/T = G/C = 1"],
-    "acid": ["pH = -log[H⁺]", "Ka = [H⁺][A⁻]/[HA]"],
+    "dna": ["A=T (2H bonds)", "G≡C (3H bonds)", "Chargaff: A/T = G/C = 1", "p² + 2pq + q² = 1"],
+    "acid": ["pH = -log[H⁺]", "Ka = [H⁺][A⁻]/[HA]", "pKa = -log Ka"],
+    "reaction": ["v = k[A]ᵐ[B]ⁿ", "ΔG = ΔH - TΔS", "Keq = [products]/[reactants]"],
     # Mathematics
     "pythagorean": ["a² + b² = c²"],
     "quadratic": ["x = (-b ± √(b²-4ac)) / 2a"],
     "circle": ["A = πr²", "C = 2πr"],
     "sphere": ["V = (4/3)πr³", "SA = 4πr²"],
+    "trigonometry": ["sin²θ + cos²θ = 1", "tanθ = sinθ/cosθ"],
     "derivative": ["d/dx(xⁿ) = nxⁿ⁻¹", "d/dx(eˣ) = eˣ", "d/dx(sin x) = cos x"],
-    "integration": ["∫xⁿdx = xⁿ⁺¹/(n+1) + C", "∫eˣdx = eˣ + C"],
+    "integration": ["∫xⁿdx = xⁿ⁺¹/(n+1) + C", "∫eˣdx = eˣ + C", "∫(1/x)dx = ln|x| + C"],
 }
 
 # Fun facts database
@@ -65,26 +68,29 @@ class KnowledgeService:
 
     def _extract_components(self, summary: str) -> list:
         """Extract key components/parts from summary text."""
-        # Find capitalized terms that likely are component names
         components = []
         
-        # Pattern: find "consists of", "made of", "contains" followed by items
+        # Pattern: find hierarchical structures
         patterns = [
             r'consists? of ([^.]+)',
             r'made of ([^.]+)',
             r'contains? ([^.]+)',
             r'composed of ([^.]+)',
+            r'subdivided into ([^.]+)',
+            r'parts: ([^.]+)',
+            r'layers: ([^.]+)',
             r'has ([^.]{5,50})',
         ]
         
         for pattern in patterns:
-            matches = re.findall(pattern, summary[:500], re.IGNORECASE)
-            for match in matches[:2]:
-                # Extract individual items
-                items = re.split(r',|and ', match)
-                for item in items[:4]:
-                    item = item.strip().strip('.')
-                    if 2 < len(item) < 40:
+            matches = re.findall(pattern, summary[:800], re.IGNORECASE)
+            for match in matches[:3]:
+                items = re.split(r',|and |as well as ', match)
+                for item in items[:5]:
+                    item = item.strip().strip('.').strip(':')
+                    if 2 < len(item) < 50:
+                        # Clean up "the", "a", "an"
+                        item = re.sub(r'^(the|a|an)\s+', '', item, flags=re.IGNORECASE)
                         components.append(item.capitalize())
         
         # Remove duplicates
@@ -95,7 +101,7 @@ class KnowledgeService:
                 seen.add(c.lower())
                 unique.append(c)
         
-        return unique[:6]  # Max 6 components
+        return unique[:10]  # Max 10 components
 
     def _get_fun_fact(self, query: str) -> str:
         """Get a fun fact related to the query."""

@@ -10,7 +10,7 @@ const DOMAIN_ICONS: Record<string, string> = {
 };
 
 export const HolographicHUD: React.FC<{ videoRef: React.RefObject<HTMLVideoElement | null> }> = ({ videoRef }) => {
-  const { gestures, scene, knowledge, setKnowledge, cameraStatus, cameraError, ario: arioState } = useStudoStore();
+  const { gestures, scene, knowledge, setKnowledge, cameraStatus, cameraError, ario: arioState, setScene, setArio } = useStudoStore();
 
   const handleSearch = (customQuery?: string) => {
     const input = document.getElementById('studo-search-input') as HTMLInputElement;
@@ -133,16 +133,49 @@ export const HolographicHUD: React.FC<{ videoRef: React.RefObject<HTMLVideoEleme
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
                 {scene.isExploded ? 'Reassemble' : 'Explode View'}
               </button>
+            </div>
 
-              <button
-                onClick={() => {
-                  setKnowledge({ loading: true, query: 'Running Math Simulation' });
-                  wsService.emit('run_experiment', { shape: 'sphere', params: { radius: 2.0, density: 7850 } });
-                }}
-                className="w-full bg-orange-500/10 border border-orange-500/40 text-orange-400 py-3 rounded-xl hover:bg-orange-500/20 transition-all font-bold tracking-widest text-[10px] uppercase flex justify-center items-center gap-2 mt-2"
-              >
-                <span>🧪</span> Run Physics Experiment
-              </button>
+            {/* Level Navigator */}
+            <div className="pt-4 border-t border-white/10">
+              <label className="text-[9px] text-white/30 uppercase tracking-widest font-bold block mb-3">Hierarchical Level</label>
+              <div className="flex flex-wrap gap-2">
+                {(['organism', 'system', 'organ', 'tissue', 'cell'] as const).map((lv) => (
+                  <button
+                    key={lv}
+                    onClick={() => {
+                      setScene({ level: lv });
+                      ario.speak(`Switching to ${lv} level.`);
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-tighter border transition-all ${
+                      scene.level === lv 
+                        ? 'bg-neon-cyan/20 border-neon-cyan text-neon-cyan shadow-[0_0_10px_rgba(0,240,255,0.3)]' 
+                        : 'bg-white/5 border-white/10 text-white/40 hover:border-white/30'
+                    }`}
+                  >
+                    {lv}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Language Switcher */}
+            <div className="pt-4 border-t border-white/10">
+              <label className="text-[9px] text-white/30 uppercase tracking-widest font-bold block mb-2">ARIA Language</label>
+              <div className="flex gap-2">
+                {(['en', 'hi', 'hinglish'] as const).map((lang) => (
+                  <button
+                    key={lang}
+                    onClick={() => setArio({ language: lang })}
+                    className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase border transition-all ${
+                      arioState.language === lang 
+                        ? 'bg-purple-400/20 border-purple-400 text-purple-400' 
+                        : 'bg-white/5 border-white/10 text-white/30 hover:bg-white/10'
+                    }`}
+                  >
+                    {lang === 'hi' ? 'Hindi' : lang === 'hinglish' ? 'Hinglish' : 'English'}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </aside>
@@ -246,6 +279,23 @@ export const HolographicHUD: React.FC<{ videoRef: React.RefObject<HTMLVideoEleme
                       <span key={i} className="bg-purple-400/10 border border-purple-400/30 text-purple-300 text-[10px] px-3 py-1 rounded-full">
                         {c}
                       </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Research Papers Section */}
+              {knowledge.researchPapers && knowledge.researchPapers.length > 0 && (
+                <div className="mb-4">
+                  <h3 className="text-[9px] font-bold text-green-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                    <span>📚</span> Research Context
+                  </h3>
+                  <div className="space-y-2">
+                    {knowledge.researchPapers.map((paper, i) => (
+                      <div key={i} className="bg-green-500/5 border border-green-500/20 rounded-lg p-2 flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full" />
+                        <span className="text-[10px] text-green-100/70 font-medium italic">{paper}</span>
+                      </div>
                     ))}
                   </div>
                 </div>

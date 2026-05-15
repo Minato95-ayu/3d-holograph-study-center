@@ -144,3 +144,35 @@ async def handle_chat(sid, data):
     except Exception as e:
         logger.error(f"❌ Chat error: {str(e)}")
         await safe_emit_error(sid, str(e))
+from ..services.research_hub import research_hub
+
+@sio.on("deep_research")
+async def handle_deep_research(sid, data):
+    try:
+        query = data.get("query", "").strip()
+        if not query:
+            return
+            
+        logger.info(f"🧪 Parallel System Research for {sid}: '{query}'")
+        
+        # 1. Get deep research results
+        results = await research_hub.conduct_deep_research(query)
+        
+        # 2. Emit the findings to the frontend for HUD display
+        await sio.emit("research_data_packet", {
+            "query": query,
+            "papers": results.get("research_papers", []),
+            "assets": results.get("holograph_3d_links", []),
+            "datapoints": results.get("deep_data_points", [])
+        }, to=sid)
+        
+        # 3. Inform the user through ARIA
+        intro_msg = f"Parallel systems analysis complete for {query}. I've found {len(results['research_papers'])} research sources and some holographic blueprints."
+        await sio.emit("ario_chat_response", {
+            "text": intro_msg,
+            "audio_base64": "" # No TTS for now, or use service
+        }, to=sid)
+
+    except Exception as e:
+        logger.error(f"❌ Research error: {str(e)}")
+        await safe_emit_error(sid, str(e))

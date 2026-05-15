@@ -38,10 +38,25 @@ const App: React.FC = () => {
       ario.greet();
     }, 2000);
 
-    speechInput.onQuery = (query) => {
+    speechInput.onQuery = async (query) => {
       console.log('🎤 ARIO heard search:', query);
-      setKnowledge({ loading: true, query });
       setArio({ state: 'thinking' });
+      
+      const lang = useStudoStore.getState().ario.language;
+      const explanation = await getExplanation(query, 'User initiated search/build request.', lang);
+
+      if (explanation.intent === 'clarification' || !explanation.isReadyToBuild) {
+        ario.speak(explanation.text);
+        setKnowledge({
+          title: 'Awaiting Details',
+          summary: explanation.scientificDetail,
+          loading: false,
+          ario_intro: explanation.text
+        });
+        return;
+      }
+
+      setKnowledge({ loading: true, query });
       wsService.emit('search', { query });
     };
 
@@ -59,66 +74,80 @@ const App: React.FC = () => {
         const parsedCmd = parseCommand(command);
         console.log('✅ Parsed command:', parsedCmd);
 
+        // Before executing, if it's a show or explain command, check with Gemini if we need clarification
+        if (parsedCmd.verb === 'show' || parsedCmd.verb === 'explain') {
+          const lang = useStudoStore.getState().ario.language;
+          setArio({ state: 'thinking' });
+          
+          const topic = parsedCmd.object || 'general research';
+          const explanation = await getExplanation(topic, `User said: ${command}`, lang);
+
+          if (explanation.intent === 'clarification' || !explanation.isReadyToBuild) {
+            console.log('🤔 ARIA needs clarification:', explanation.text);
+            ario.speak(explanation.text);
+            setKnowledge({
+              title: 'ARIA Needs More Info',
+              summary: explanation.scientificDetail,
+              loading: false,
+              ario_intro: explanation.text
+            });
+            return; // STOP execution here, wait for user input
+          }
+        }
+
         executeCommand(parsedCmd, {
           onShow: (obj) => {
-            ario.speak(`Displaying the ${obj}. This is a critical engine component.`);
+            const lang = useStudoStore.getState().ario.language;
+            // No need to speak here as getExplanation already did or will handle it
+            setKnowledge({ loading: true, query: obj });
+            wsService.emit('search', { query: obj });
           },
           onExplain: async (obj) => {
-            const explanation = await getExplanation(obj);
+            const lang = useStudoStore.getState().ario.language;
+            setArio({ state: 'thinking' });
+            const explanation = await getExplanation(obj, undefined, lang);
             ario.speak(explanation.text);
+            setKnowledge({
+              title: obj.toUpperCase(),
+              summary: explanation.scientificDetail,
+              formulas: explanation.formulas || [],
+              components: explanation.relatedTopics || [],
+              ario_intro: explanation.text,
+              loading: false
+            });
+          },
+          onLevel: (level) => {
+            const lang = useStudoStore.getState().ario.language;
+            const msg = lang === 'hi' ? `${level} level par ja raha hoon.` : lang === 'hinglish' ? `${level} level par switch kar raha hoon.` : `Switching to ${level} level.`;
+            ario.speak(msg);
+            setScene({ level: level as any });
           },
           onRun: async () => {
             setIsSimulating(true);
-            ario.speak('Starting simulation. Running experiment...');
+            const lang = useStudoStore.getState().ario.language;
+            const msg = lang === 'hi' ? 'Simulation shuru ho rahi hai.' : lang === 'hinglish' ? 'Simulation start ho rahi hai.' : 'Starting simulation. Running experiment...';
+            ario.speak(msg);
             
             // Simulate results after delay
             setTimeout(() => {
               setResults({
-                experimentName: 'Car Engine Performance Test',
+                experimentName: 'Multi-Level Structural Analysis',
                 metrics: [
-                  {
-                    label: 'Power Output',
-                    value: 450,
-                    unit: 'HP',
-                    percentage: 90,
-                    color: '#00f0ff',
-                    icon: '⚡',
-                  },
-                  {
-                    label: 'Temperature',
-                    value: 890,
-                    unit: '°C',
-                    percentage: 85,
-                    color: '#ff6b00',
-                    icon: '🌡️',
-                  },
-                  {
-                    label: 'Efficiency',
-                    value: 78,
-                    unit: '%',
-                    percentage: 78,
-                    color: '#00ff00',
-                    icon: '💨',
-                  },
+                  { label: 'Atomic Stability', value: 98, unit: '%', percentage: 98, color: '#00f0ff', icon: '⚛️' },
+                  { label: 'Energy Flux', value: 1240, unit: 'W', percentage: 75, color: '#ff6b00', icon: '⚡' },
+                  { label: 'Logic Coherence', value: 94, unit: '%', percentage: 94, color: '#00ff00', icon: '🧠' },
                 ],
-                explanation:
-                  'Experiment complete. Engine operating at peak performance with 450 HP output and 78% efficiency.',
-                suggestions: [
-                  'Optimize fuel injection timing for better efficiency',
-                  'Add cooling system to reduce operating temperature',
-                  'Upgrade to premium fuel for increased power output',
-                ],
+                explanation: 'Analysis complete. Mathematical logic confirms high structural stability across all levels.',
+                suggestions: ['Explore sub-atomic layers', 'Check quantum resonance', 'Optimize molecular bonds'],
                 isRunning: false,
               });
               setIsSimulating(false);
-              ario.speak(
-                'Simulation complete. Power output 450 HP, efficiency 78 percent, temperature 890 Celsius. Experiment successful.'
-              );
+              ario.speak('Experiment complete. All systems nominal.', true);
             }, 3000);
           },
           onStop: () => {
             setIsSimulating(false);
-            ario.speak('Stopping simulation.');
+            ario.speak('Stopping.');
           },
         });
       } catch (error) {
@@ -214,9 +243,23 @@ const App: React.FC = () => {
       } catch (e) {
         console.error('Hologram build error:', e);
       }
+
+      // Automatically trigger Parallel System Research for complex topics
+      if (data.domain !== 'general') {
+        wsService.emit('deep_research', { query: data.query });
+      }
     };
 
     socket.on('search_result', handleSearchResult);
+    
+    socket.on('research_data_packet', (data) => {
+      console.log('🧬 Research Packet Received:', data);
+      setKnowledge(prev => ({
+        ...prev,
+        summary: prev.summary + `\n\n[PARALLEL SYSTEM ANALYSIS]\nScientific Papers: ${data.papers.length}\nBlueprints: ${data.assets.length}\n\nTop Data Points:\n- ${data.datapoints.slice(0, 3).join('\n- ')}`,
+        components: [...(prev.components || []), ...data.assets.map((a: string) => `Blueprint: ${a.split('/').pop()}`)]
+      }));
+    });
 
     socket.on('experiment_result', (data: any) => {
       console.log('🧪 Experiment Result:', data);
@@ -331,12 +374,12 @@ const App: React.FC = () => {
                 🔧 Components
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {['Piston', 'Cylinder', 'Crankshaft', 'Valve', 'Turbo'].map((comp) => (
+                {(knowledge.components?.length ? knowledge.components : ['Piston', 'Cylinder', 'Crankshaft', 'Valve', 'Turbo']).map((comp) => (
                   <button
                     key={comp}
                     onClick={() => {
                       ario.speak(`Explaining the ${comp.toLowerCase()}.`);
-                      parseCommand(`explain the ${comp.toLowerCase()}`);
+                      wsService.emit('search', { query: comp });
                     }}
                     style={{
                       padding: '8px 12px',
@@ -345,20 +388,43 @@ const App: React.FC = () => {
                       color: '#00f0ff',
                       borderRadius: '4px',
                       cursor: 'pointer',
-                      fontSize: '12px',
+                      fontSize: '11px',
                       fontWeight: 'bold',
                       transition: 'all 0.2s',
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.background = 'rgba(0, 240, 255, 0.2)';
-                      e.currentTarget.style.boxShadow = '0 0 10px rgba(0, 240, 255, 0.5)';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.background = 'rgba(0, 240, 255, 0.1)';
-                      e.currentTarget.style.boxShadow = 'none';
                     }}
                   >
                     ✓ {comp}
+                  </button>
+                ))}
+              </div>
+
+              {/* Hierarchy Navigator in Demo Mode */}
+              <h3 style={{ color: '#00f0ff', margin: '24px 0 12px 0', fontSize: '14px', fontWeight: 'bold' }}>
+                📐 Navigation
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                {(['system', 'organ', 'tissue', 'cell'] as const).map((lv) => (
+                  <button
+                    key={lv}
+                    onClick={() => setScene({ level: lv })}
+                    style={{
+                      padding: '6px',
+                      background: sceneState.level === lv ? '#00f0ff' : 'transparent',
+                      border: '1px solid #00f0ff',
+                      color: sceneState.level === lv ? '#000' : '#00f0ff',
+                      borderRadius: '4px',
+                      fontSize: '10px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {lv.toUpperCase()}
                   </button>
                 ))}
               </div>
@@ -398,23 +464,75 @@ const App: React.FC = () => {
                 />
               ) : (
                 <>
+                <div style={{ overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
                   <h3 style={{ color: '#00f0ff', margin: '0 0 12px 0', fontSize: '14px', fontWeight: 'bold' }}>
-                    📋 Instructions
+                    📖 Research context
                   </h3>
-                  <div style={{ color: '#b0d4ff', fontSize: '12px', lineHeight: '1.6' }}>
-                    <p>
-                      <strong>Try these voice commands:</strong>
-                    </p>
-                    <ul style={{ paddingLeft: '16px', margin: '8px 0' }}>
-                      <li>"ARIA, show me an engine"</li>
-                      <li>"ARIA, explain the piston"</li>
-                      <li>"ARIA, run the simulation"</li>
-                      <li>"ARIA, add turbo"</li>
-                    </ul>
-                    <p style={{ marginTop: '16px' }}>
-                      <strong>Or click components on the left to learn about them.</strong>
-                    </p>
+                  {knowledge.summary ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <p style={{ color: '#b0d4ff', fontSize: '12px', lineHeight: '1.6', margin: 0 }}>
+                        {knowledge.summary.slice(0, 300)}...
+                      </p>
+                      
+                      {knowledge.formulas?.length ? (
+                        <div>
+                          <h4 style={{ color: '#00f0ff', fontSize: '10px', margin: '0 0 4px 0', textTransform: 'uppercase' }}>⚡ Formulas</h4>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                            {knowledge.formulas.map(f => (
+                              <span key={f} style={{ background: 'rgba(0,240,255,0.1)', border: '1px solid #00f0ff', color: '#00f0ff', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontFamily: 'monospace' }}>{f}</span>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {knowledge.researchPapers?.length ? (
+                        <div>
+                          <h4 style={{ color: '#00ff88', fontSize: '10px', margin: '0 0 4px 0', textTransform: 'uppercase' }}>📚 Papers</h4>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {knowledge.researchPapers.map(p => (
+                              <span key={p} style={{ color: '#00ff88', fontSize: '10px', borderLeft: '2px solid #00ff88', paddingLeft: '6px' }}>{p}</span>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div style={{ color: '#b0d4ff', fontSize: '12px', lineHeight: '1.6' }}>
+                      <p><strong>Try these voice commands:</strong></p>
+                      <ul style={{ paddingLeft: '16px', margin: '8px 0' }}>
+                        <li>"ARIA, show me a cell"</li>
+                        <li>"ARIA, level down"</li>
+                        <li>"ARIA, samjhao cell wall"</li>
+                        <li>"ARIA, switch to Hindi"</li>
+                      </ul>
+                    </div>
+                  )}
+
+                  <div style={{ marginTop: '24px', borderTop: '1px solid rgba(0,240,255,0.1)', paddingTop: '16px' }}>
+                    <h3 style={{ color: '#ff00ff', margin: '0 0 12px 0', fontSize: '14px', fontWeight: 'bold' }}>🌐 Language</h3>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      {['en', 'hi', 'hinglish'].map(l => (
+                        <button
+                          key={l}
+                          onClick={() => setArio({ language: l as any })}
+                          style={{
+                            flex: 1,
+                            padding: '6px',
+                            background: useStudoStore.getState().ario.language === l ? '#ff00ff' : 'transparent',
+                            border: '1px solid #ff00ff',
+                            color: useStudoStore.getState().ario.language === l ? '#000' : '#ff00ff',
+                            borderRadius: '4px',
+                            fontSize: '10px',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {l.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+                </div>
 
                   <button
                     onClick={() => {
@@ -467,8 +585,10 @@ const App: React.FC = () => {
               placeholder="Say or type: 'ARIA, show me an engine'"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && e.currentTarget.value) {
-                  parseCommand(e.currentTarget.value);
+                  const val = e.currentTarget.value;
                   e.currentTarget.value = '';
+                  // Manually trigger the command handler to ensure clarification logic runs
+                  speechInput.onCommand?.(val);
                 }
               }}
               style={{

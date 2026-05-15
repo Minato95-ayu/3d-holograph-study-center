@@ -9,6 +9,8 @@ export const ExperimentLab: React.FC = () => {
   const engineGroupRef = useRef<THREE.Group | null>(null);
   const [selectedPart, setSelectedPart] = useState<THREE.Object3D | null>(null);
   const [hoveredPart, setHoveredPart] = useState<THREE.Object3D | null>(null);
+  const { scene: sceneState } = useStudoStore();
+  const level = sceneState.level;
 
   useEffect(() => {
     if (!mountRef.current) return;
@@ -63,73 +65,94 @@ export const ExperimentLab: React.FC = () => {
     scene.add(secondaryLight);
 
     // =====================================
-    // 5. CREATE ENGINE GROUP (Main Model)
+    // 5. CREATE CONTENT BASED ON LEVEL
     // =====================================
-    const engineGroup = new THREE.Group();
-    engineGroup.name = 'engine';
-    engineGroupRef.current = engineGroup;
+    const contentGroup = new THREE.Group();
+    engineGroupRef.current = contentGroup;
+    scene.add(contentGroup);
 
-    // CYLINDER (Main body)
-    const cylinderGeometry = new THREE.CylinderGeometry(1.2, 1.2, 2.5, 32);
-    const cylinderMaterial = new THREE.MeshPhongMaterial({
-      color: 0xff00ff,
-      emissive: 0x440044,
-      shininess: 100,
-    });
-    const cylinder = new THREE.Mesh(cylinderGeometry, cylinderMaterial);
-    cylinder.name = 'cylinder';
-    cylinder.castShadow = true;
-    cylinder.receiveShadow = true;
-    engineGroup.add(cylinder);
+    if (level === 'system' || level === 'organism') {
+      // ENGINE MODEL (Standard view)
+      const cylinderGeometry = new THREE.CylinderGeometry(1.2, 1.2, 2.5, 32);
+      const cylinderMaterial = new THREE.MeshPhongMaterial({ color: 0xff00ff, emissive: 0x440044, shininess: 100 });
+      const cylinder = new THREE.Mesh(cylinderGeometry, cylinderMaterial);
+      cylinder.name = 'cylinder';
+      contentGroup.add(cylinder);
 
-    // PISTON (Moves up/down)
-    const pistonGeometry = new THREE.SphereGeometry(0.4, 32, 32);
-    const pistonMaterial = new THREE.MeshPhongMaterial({
-      color: 0x00f0ff,
-      emissive: 0x004466,
-      shininess: 150,
-    });
-    const piston = new THREE.Mesh(pistonGeometry, pistonMaterial);
-    piston.position.y = 1.8;
-    piston.name = 'piston';
-    piston.castShadow = true;
-    piston.receiveShadow = true;
-    engineGroup.add(piston);
+      const pistonGeometry = new THREE.SphereGeometry(0.4, 32, 32);
+      const pistonMaterial = new THREE.MeshPhongMaterial({ color: 0x00f0ff, emissive: 0x004466, shininess: 150 });
+      const piston = new THREE.Mesh(pistonGeometry, pistonMaterial);
+      piston.position.y = 1.8;
+      piston.name = 'piston';
+      contentGroup.add(piston);
 
-    // CRANKSHAFT (Rotating horizontal shaft)
-    const crankshaftGeometry = new THREE.CylinderGeometry(0.25, 0.25, 3, 16);
-    const crankshaftMaterial = new THREE.MeshPhongMaterial({
-      color: 0x00d0ff,
-      emissive: 0x003344,
-      shininess: 120,
-    });
-    const crankshaft = new THREE.Mesh(crankshaftGeometry, crankshaftMaterial);
-    crankshaft.rotation.z = Math.PI / 2;
-    crankshaft.name = 'crankshaft';
-    crankshaft.castShadow = true;
-    crankshaft.receiveShadow = true;
-    engineGroup.add(crankshaft);
+      const crankshaftGeometry = new THREE.CylinderGeometry(0.25, 0.25, 3, 16);
+      const crankshaftMaterial = new THREE.MeshPhongMaterial({ color: 0x00d0ff, emissive: 0x003344, shininess: 120 });
+      const crankshaft = new THREE.Mesh(crankshaftGeometry, crankshaftMaterial);
+      crankshaft.rotation.z = Math.PI / 2;
+      crankshaft.name = 'crankshaft';
+      contentGroup.add(crankshaft);
+    } 
+    else if (level === 'organ' || level === 'tissue') {
+      // TISSUE/STRUCTURE MODEL (Abstract biological/mechanical structure)
+      const structureGeometry = new THREE.IcosahedronGeometry(1.5, 2);
+      const structureMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0xff44aa, 
+        wireframe: true,
+        emissive: 0x220011,
+        transparent: true,
+        opacity: 0.6
+      });
+      const structure = new THREE.Mesh(structureGeometry, structureMaterial);
+      structure.name = 'tissue-layer';
+      contentGroup.add(structure);
 
-    // VALVES (Top)
-    const valveGeometry = new THREE.BoxGeometry(0.3, 0.6, 0.3);
-    const valveMaterial = new THREE.MeshPhongMaterial({
-      color: 0xff6600,
-      emissive: 0x663300,
-      shininess: 80,
-    });
-    const valve1 = new THREE.Mesh(valveGeometry, valveMaterial);
-    valve1.position.set(0.8, 1.8, 0.8);
-    valve1.name = 'valve-inlet';
-    valve1.castShadow = true;
-    engineGroup.add(valve1);
+      // Add "internal" components
+      for (let i = 0; i < 8; i++) {
+        const component = new THREE.Mesh(
+          new THREE.SphereGeometry(0.3, 16, 16),
+          new THREE.MeshPhongMaterial({ color: 0x00ffff, emissive: 0x003333 })
+        );
+        component.position.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(2);
+        component.name = `sub-component-${i}`;
+        contentGroup.add(component);
+      }
+    }
+    else if (level === 'cell') {
+      // UNIT CELL MODEL
+      const cellGeometry = new THREE.SphereGeometry(1.8, 32, 32);
+      const cellMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0x00ff88, 
+        transparent: true, 
+        opacity: 0.3,
+        shininess: 200,
+        side: THREE.BackSide
+      });
+      const cellWall = new THREE.Mesh(cellGeometry, cellMaterial);
+      cellWall.name = 'unit-cell-wall';
+      contentGroup.add(cellWall);
 
-    const valve2 = new THREE.Mesh(valveGeometry, valveMaterial);
-    valve2.position.set(-0.8, 1.8, 0.8);
-    valve2.name = 'valve-exhaust';
-    valve2.castShadow = true;
-    engineGroup.add(valve2);
+      // Nucleus / Core
+      const nucleus = new THREE.Mesh(
+        new THREE.SphereGeometry(0.6, 32, 32),
+        new THREE.MeshPhongMaterial({ color: 0xff00ff, emissive: 0x330033 })
+      );
+      nucleus.name = 'nucleus';
+      contentGroup.add(nucleus);
 
-    scene.add(engineGroup);
+      // DNA / Data Strands
+      const curve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(-1, -1, 0),
+        new THREE.Vector3(-0.5, 0.5, 0.5),
+        new THREE.Vector3(0.5, -0.5, -0.5),
+        new THREE.Vector3(1, 1, 0),
+      ]);
+      const dnaGeom = new THREE.TubeGeometry(curve, 20, 0.05, 8, false);
+      const dnaMat = new THREE.MeshPhongMaterial({ color: 0x00f0ff });
+      const dna = new THREE.Mesh(dnaGeom, dnaMat);
+      dna.name = 'core-data-strand';
+      contentGroup.add(dna);
+    }
 
     // =====================================
     // 6. ADD GROUND PLANE

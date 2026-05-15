@@ -9,6 +9,10 @@ export interface Explanation {
   scientificDetail: string; // Detailed technical explanation
   suggestions: string[]; // 2-3 practical applications
   relatedTopics: string[]; // 2-3 related topics
+  formulas?: string[];
+  researchPapers?: string[];
+  intent?: 'explanation' | 'invention' | 'clarification';
+  isReadyToBuild?: boolean;
   source: 'gemini' | 'fallback';
 }
 
@@ -126,7 +130,11 @@ const FALLBACK_EXPLANATIONS: Record<string, Explanation> = {
  * Get explanation for a topic
  * First tries Gemini API, falls back to hardcoded explanations
  */
-export async function getExplanation(topic: string, context?: string): Promise<Explanation> {
+export async function getExplanation(
+  topic: string, 
+  context?: string, 
+  language: 'en' | 'hi' | 'hinglish' = 'en'
+): Promise<Explanation> {
   const normalizedTopic = topic.toLowerCase().trim();
 
   // 1. Check cache first
@@ -144,7 +152,7 @@ export async function getExplanation(topic: string, context?: string): Promise<E
   // 2. Try Gemini API if key is available
   if (apiKey) {
     try {
-      explanation = await fetchFromGemini(normalizedTopic, context, apiKey);
+      explanation = await fetchFromGemini(normalizedTopic, context, apiKey, language);
       setCached(normalizedTopic, explanation);
       return explanation;
     } catch (error) {
@@ -165,27 +173,38 @@ export async function getExplanation(topic: string, context?: string): Promise<E
 async function fetchFromGemini(
   topic: string,
   context: string | undefined,
-  apiKey: string
+  apiKey: string,
+  language: 'en' | 'hi' | 'hinglish'
 ): Promise<Explanation> {
-  const prompt = `You are ARIA, a helpful science lab assistant teaching students (age 12-18).
+  const langPrompt = language === 'hi' ? 'Explain in Hindi.' : language === 'hinglish' ? 'Explain in Hinglish (Hindi + English mix, natural student tone).' : 'Explain in English.';
+  
+  const prompt = `You are ARIA, a highly advanced Virtual Research Assistant, similar to JARVIS or FRIDAY.
+  
+  ${langPrompt}
+  
+  Topic: ${topic}
+  Context: ${context || 'General scientific research'}
+  
+  Your goal is to have a human-like dialogue. 
+  1. If the user's request is too vague to build or invent (e.g., "make something cool", "kuch bada banate hain"), you MUST ask clarifying questions to understand their vision (intent: "clarification").
+  2. If the request is clear (e.g., "build a rocket engine", "human heart dikhao"), explain it and mark as ready to build.
+  3. Speak in a sophisticated, proactive, and slightly witty tone.
+  
+  Provide a JSON response with this exact structure:
+  {
+    "intent": "explanation" | "invention" | "clarification",
+    "isReadyToBuild": boolean,
+    "simple": "A sophisticated 2-sentence response for speech synthesis. If clarification, ask your questions here.",
+    "detailed": "A detailed technical explanation or a breakdown of what info you need to proceed.",
+    "suggestions": ["Practical application/Invention idea 1", "Idea 2", "Idea 3"],
+    "relatedTopics": ["Related topic 1", "Related topic 2", "Related topic 3"],
+    "formulas": ["Formula 1", "Formula 2"],
+    "researchPapers": ["Relevant research paper/concept title 1", "Title 2"]
+  }
 
-Explain this concept:
-Topic: ${topic}
-Context: ${context || 'General engine/mechanical explanation'}
-
-Provide a JSON response with this exact structure:
-{
-  "simple": "A 2-sentence simple explanation suitable for speech synthesis",
-  "detailed": "A detailed scientific explanation with technical depth",
-  "suggestions": ["Practical application 1", "Practical application 2", "Practical application 3"],
-  "relatedTopics": ["Related topic 1", "Related topic 2", "Related topic 3"]
-}
-
-IMPORTANT:
-- The "simple" field must be exactly 2 sentences
-- Use technical accuracy
-- Make it appropriate for students
-- Return ONLY valid JSON, no markdown or extra text`;
+  IMPORTANT:
+  - If intent is "clarification", isReadyToBuild MUST be false.
+  - Return ONLY valid JSON, no markdown or extra text.`;
 
   const response = await fetch(
     'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
@@ -244,6 +263,10 @@ IMPORTANT:
     scientificDetail: parsed.detailed || 'See simple explanation.',
     suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
     relatedTopics: Array.isArray(parsed.relatedTopics) ? parsed.relatedTopics : [],
+    formulas: Array.isArray(parsed.formulas) ? parsed.formulas : [],
+    researchPapers: Array.isArray(parsed.researchPapers) ? parsed.researchPapers : [],
+    intent: parsed.intent || 'explanation',
+    isReadyToBuild: parsed.isReadyToBuild ?? true,
     source: 'gemini',
   };
 }
