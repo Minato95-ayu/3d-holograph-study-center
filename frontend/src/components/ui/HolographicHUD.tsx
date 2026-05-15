@@ -235,11 +235,6 @@ export const HolographicHUD: React.FC<{ videoRef: React.RefObject<HTMLVideoEleme
                 {knowledge.summary}
               </p>
 
-              {/* Formulas Section */}
-              {knowledge.formulas && knowledge.formulas.length > 0 && (
-                  </div>
-                </div>
-              )}
 
               {/* Formulas Section */}
               {knowledge.formulas && knowledge.formulas.length > 0 && (
