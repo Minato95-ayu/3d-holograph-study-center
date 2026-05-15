@@ -41,6 +41,7 @@ interface StudoState {
       calculations: Record<string, number> | null;
       glb_base64: string | null;
     } | null;
+    researchPapers?: { title: string; url: string; snippet: string }[];
   };
   setKnowledge: (knowledge: Partial<StudoState['knowledge']>) => void;
 

@@ -2,7 +2,7 @@
 
 type SpeechCallback = (transcript: string, isFinal: boolean) => void;
 type QueryCallback = (query: string) => void;
-type CommandCallback = (command: 'explode' | 'assemble' | 'stop_talking') => void;
+type CommandCallback = (command: string) => void;
 
 class SpeechInputEngine {
   private recognition: any = null;

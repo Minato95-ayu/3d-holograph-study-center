@@ -17,6 +17,8 @@ const App: React.FC = () => {
   const setKnowledge = useStudoStore((state) => state.setKnowledge);
   const setScene = useStudoStore((state) => state.setScene);
   const setArio = useStudoStore((state) => state.setArio);
+  const knowledge = useStudoStore((state) => state.knowledge);
+  const sceneState = useStudoStore((state) => state.scene);
 
   // ARIA Lab demo states
   const [demoMode, setDemoMode] = useState(true); // Start in demo mode for judges
@@ -66,7 +68,7 @@ const App: React.FC = () => {
       wsService.emit('ario_chat', { text });
     };
 
-    speechInput.onCommand = (command) => {
+    speechInput.onCommand = async (command) => {
       console.log('🎤 ARIO heard command:', command);
       
       // Try to parse as ARIA Lab command first
@@ -97,7 +99,6 @@ const App: React.FC = () => {
 
         executeCommand(parsedCmd, {
           onShow: (obj) => {
-            const lang = useStudoStore.getState().ario.language;
             // No need to speak here as getExplanation already did or will handle it
             setKnowledge({ loading: true, query: obj });
             wsService.emit('search', { query: obj });
@@ -254,11 +255,12 @@ const App: React.FC = () => {
     
     socket.on('research_data_packet', (data) => {
       console.log('🧬 Research Packet Received:', data);
-      setKnowledge(prev => ({
-        ...prev,
-        summary: prev.summary + `\n\n[PARALLEL SYSTEM ANALYSIS]\nScientific Papers: ${data.papers.length}\nBlueprints: ${data.assets.length}\n\nTop Data Points:\n- ${data.datapoints.slice(0, 3).join('\n- ')}`,
-        components: [...(prev.components || []), ...data.assets.map((a: string) => `Blueprint: ${a.split('/').pop()}`)]
-      }));
+      const currentKnowledge = useStudoStore.getState().knowledge;
+      setKnowledge({
+        summary: (currentKnowledge.summary || '') + `\n\n[PARALLEL SYSTEM ANALYSIS]\nScientific Papers: ${data.papers.length}\nBlueprints: ${data.assets.length}\n\nTop Data Points:\n- ${data.datapoints.slice(0, 3).join('\n- ')}`,
+        components: [...(currentKnowledge.components || []), ...data.assets.map((a: string) => `Blueprint: ${a.split('/').pop()}`)],
+        researchPapers: data.papers
+      });
     });
 
     socket.on('experiment_result', (data: any) => {
@@ -489,8 +491,16 @@ const App: React.FC = () => {
                         <div>
                           <h4 style={{ color: '#00ff88', fontSize: '10px', margin: '0 0 4px 0', textTransform: 'uppercase' }}>📚 Papers</h4>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            {knowledge.researchPapers.map(p => (
-                              <span key={p} style={{ color: '#00ff88', fontSize: '10px', borderLeft: '2px solid #00ff88', paddingLeft: '6px' }}>{p}</span>
+                            {knowledge.researchPapers.map((p: any, i: number) => (
+                              <a 
+                                key={i} 
+                                href={p.url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                style={{ color: '#00ff88', fontSize: '10px', borderLeft: '2px solid #00ff88', paddingLeft: '6px', textDecoration: 'none' }}
+                              >
+                                {p.title}
+                              </a>
                             ))}
                           </div>
                         </div>

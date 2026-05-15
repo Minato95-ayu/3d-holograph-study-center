@@ -291,11 +291,17 @@ export const HolographicHUD: React.FC<{ videoRef: React.RefObject<HTMLVideoEleme
                     <span>📚</span> Research Context
                   </h3>
                   <div className="space-y-2">
-                    {knowledge.researchPapers.map((paper, i) => (
-                      <div key={i} className="bg-green-500/5 border border-green-500/20 rounded-lg p-2 flex items-center gap-2">
+                    {knowledge.researchPapers.map((paper: any, i: number) => (
+                      <a 
+                        key={i} 
+                        href={paper.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="bg-green-500/5 border border-green-500/20 rounded-lg p-2 flex items-center gap-2 hover:bg-green-500/10 transition-colors cursor-pointer block"
+                      >
                         <div className="w-1.5 h-1.5 bg-green-400 rounded-full" />
-                        <span className="text-[10px] text-green-100/70 font-medium italic">{paper}</span>
-                      </div>
+                        <span className="text-[10px] text-green-100/70 font-medium italic">{paper.title}</span>
+                      </a>
                     ))}
                   </div>
                 </div>

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { useStudoStore } from '../../store/useStudoStore';
 
 export const ExperimentLab: React.FC = () => {
   const mountRef = useRef<HTMLDivElement>(null);
@@ -177,7 +178,7 @@ export const ExperimentLab: React.FC = () => {
     const originalMaterials = new Map<THREE.Object3D, THREE.Material | THREE.Material[]>();
 
     // Store original materials
-    engineGroup.children.forEach((child) => {
+    contentGroup.children.forEach((child) => {
       if (child instanceof THREE.Mesh) {
         originalMaterials.set(child, child.material);
       }
@@ -196,7 +197,7 @@ export const ExperimentLab: React.FC = () => {
       mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
       raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObjects(engineGroup.children);
+      const intersects = raycaster.intersectObjects(contentGroup.children);
 
       // Reset previous hover
       if (hoveredPart && hoveredPart instanceof THREE.Mesh) {
@@ -233,7 +234,7 @@ export const ExperimentLab: React.FC = () => {
       mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
       raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObjects(engineGroup.children);
+      const intersects = raycaster.intersectObjects(contentGroup.children);
 
       if (intersects.length > 0) {
         const clicked = intersects[0].object;
@@ -271,24 +272,24 @@ export const ExperimentLab: React.FC = () => {
       animationId = requestAnimationFrame(animate);
 
       // Auto-rotate engine
-      engineGroup.rotation.y += 0.005;
-      engineGroup.rotation.x += 0.001;
+      contentGroup.rotation.y += 0.005;
+      contentGroup.rotation.x += 0.001;
 
       // Animate piston (up and down motion)
-      const pistonMesh = engineGroup.children.find((child) => child.name === 'piston');
+      const pistonMesh = contentGroup.children.find((child) => child.name === 'piston');
       if (pistonMesh) {
         pistonMesh.position.y = 1.8 + Math.sin(Date.now() * 0.005) * 0.4;
       }
 
       // Rotate crankshaft
-      const crankshaftMesh = engineGroup.children.find((child) => child.name === 'crankshaft');
+      const crankshaftMesh = contentGroup.children.find((child) => child.name === 'crankshaft');
       if (crankshaftMesh) {
         crankshaftMesh.rotation.z += 0.02;
       }
 
       // Animate valves (open/close)
-      const valveInlet = engineGroup.children.find((child) => child.name === 'valve-inlet');
-      const valveExhaust = engineGroup.children.find((child) => child.name === 'valve-exhaust');
+      const valveInlet = contentGroup.children.find((child) => child.name === 'valve-inlet');
+      const valveExhaust = contentGroup.children.find((child) => child.name === 'valve-exhaust');
       if (valveInlet && valveExhaust) {
         const valveOpen = Math.sin(Date.now() * 0.008) * 0.3;
         valveInlet.position.y = 1.8 + valveOpen;
@@ -329,14 +330,16 @@ export const ExperimentLab: React.FC = () => {
       renderer.domElement.removeEventListener('click', onMouseClick);
 
       // Dispose resources
-      cylinderGeometry.dispose();
-      cylinderMaterial.dispose();
-      pistonGeometry.dispose();
-      pistonMaterial.dispose();
-      crankshaftGeometry.dispose();
-      crankshaftMaterial.dispose();
-      valveGeometry.dispose();
-      valveMaterial.dispose();
+      contentGroup.children.forEach(child => {
+        if (child instanceof THREE.Mesh) {
+          child.geometry.dispose();
+          if (Array.isArray(child.material)) {
+            child.material.forEach(m => m.dispose());
+          } else {
+            child.material.dispose();
+          }
+        }
+      });
       groundGeometry.dispose();
       groundMaterial.dispose();
       renderer.dispose();
