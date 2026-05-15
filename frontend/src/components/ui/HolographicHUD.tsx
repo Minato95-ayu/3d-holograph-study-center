@@ -237,6 +237,12 @@ export const HolographicHUD: React.FC<{ videoRef: React.RefObject<HTMLVideoEleme
 
               {/* Formulas Section */}
               {knowledge.formulas && knowledge.formulas.length > 0 && (
+                  </div>
+                </div>
+              )}
+
+              {/* Formulas Section */}
+              {knowledge.formulas && knowledge.formulas.length > 0 && (
                 <div className="mb-4">
                   <h3 className="text-[9px] font-bold text-neon-cyan uppercase tracking-widest mb-2 flex items-center gap-2">
                     <span>⚡</span> Key Formulas
@@ -245,6 +251,22 @@ export const HolographicHUD: React.FC<{ videoRef: React.RefObject<HTMLVideoEleme
                     {knowledge.formulas.map((f, i) => (
                       <div key={i} className="bg-neon-cyan/5 border border-neon-cyan/20 rounded-lg px-3 py-2 text-center">
                         <span className="text-neon-cyan font-mono text-xs font-bold">{f}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Cross Questions / Argument Section */}
+              {knowledge.crossQuestions && knowledge.crossQuestions.length > 0 && (
+                <div className="mb-4 mt-6 border-t border-purple-400/20 pt-4">
+                  <h3 className="text-[9px] font-bold text-purple-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <span>🤔</span> Scientific Cross-Examination
+                  </h3>
+                  <div className="flex flex-col gap-2">
+                    {knowledge.crossQuestions.map((q, i) => (
+                      <div key={i} className="bg-purple-400/5 border border-purple-400/20 rounded-lg p-3 group hover:bg-purple-400/10 transition-all cursor-pointer">
+                        <p className="text-[10px] text-white/80 leading-relaxed italic">"{q}"</p>
                       </div>
                     ))}
                   </div>

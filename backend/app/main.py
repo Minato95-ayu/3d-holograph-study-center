@@ -40,6 +40,18 @@ async def get_tts(text: str):
         return Response(content=audio_bytes, media_type="audio/mpeg")
     return Response(status_code=500)
 
+from .services.gemini_service import gemini_service
+from pydantic import BaseModel
+
+class ExplanationRequest(BaseModel):
+    topic: str
+    context: str = ""
+    lang: str = "en"
+
+@app.post("/api/explain")
+async def explain(req: ExplanationRequest):
+    return await gemini_service.get_scientific_explanation(req.topic, req.context, req.lang)
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app.main:socket_app", host="0.0.0.0", port=8000, reload=True)

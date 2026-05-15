@@ -145,6 +145,28 @@ async def handle_chat(sid, data):
         logger.error(f"❌ Chat error: {str(e)}")
         await safe_emit_error(sid, str(e))
 from ..services.research_hub import research_hub
+from ..services.gemini_service import gemini_service
+from ..services.tool_orchestrator import tool_orchestrator
+
+@sio.on("get_explanation")
+async def handle_get_explanation(sid, data):
+    try:
+        topic = data.get("topic", "")
+        context = data.get("context", "")
+        lang = data.get("lang", "en")
+        
+        logger.info(f"🧠 Fetching scientific explanation for {sid}: '{topic}'")
+        explanation = await gemini_service.get_scientific_explanation(topic, context, lang)
+        
+        # Execute any agentic actions
+        actions = explanation.get("actions", [])
+        if actions:
+            await tool_orchestrator.execute_actions(actions, sid, sio)
+            
+        await sio.emit("explanation_response", explanation, to=sid)
+    except Exception as e:
+        logger.error(f"❌ Explanation error: {str(e)}")
+        await safe_emit_error(sid, str(e))
 
 @sio.on("deep_research")
 async def handle_deep_research(sid, data):

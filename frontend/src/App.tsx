@@ -84,12 +84,13 @@ const App: React.FC = () => {
           const topic = parsedCmd.object || 'general research';
           const explanation = await getExplanation(topic, `User said: ${command}`, lang);
 
-          if (explanation.intent === 'clarification' || !explanation.isReadyToBuild) {
-            console.log('🤔 ARIA needs clarification:', explanation.text);
+          if (explanation.intent === 'clarification' || explanation.intent === 'argument' || !explanation.isReadyToBuild) {
+            console.log('🤔 ARIA needs clarification/argument:', explanation.text);
             ario.speak(explanation.text);
             setKnowledge({
-              title: 'ARIA Needs More Info',
+              title: explanation.intent === 'argument' ? 'Scientific Cross-Examination' : 'ARIA Needs More Info',
               summary: explanation.scientificDetail,
+              crossQuestions: explanation.crossQuestions || [],
               loading: false,
               ario_intro: explanation.text
             });

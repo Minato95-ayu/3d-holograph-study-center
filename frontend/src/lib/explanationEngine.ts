@@ -146,20 +146,15 @@ export async function getExplanation(
 
   console.log(`📚 Fetching explanation for: "${normalizedTopic}"`);
 
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
   let explanation: Explanation;
 
-  // 2. Try Gemini API if key is available
-  if (apiKey) {
-    try {
-      explanation = await fetchFromGemini(normalizedTopic, context, apiKey, language);
-      setCached(normalizedTopic, explanation);
-      return explanation;
-    } catch (error) {
-      console.warn(`⚠️ Gemini API failed, using fallback:`, error);
-    }
-  } else {
-    console.warn('⚠️ Gemini API key not configured');
+  // 2. Try Backend Secure API
+  try {
+    explanation = await fetchFromBackend(normalizedTopic, context, language);
+    setCached(normalizedTopic, explanation);
+    return explanation;
+  } catch (error) {
+    console.warn(`⚠️ Backend explanation failed, using fallback:`, error);
   }
 
   // 3. Return fallback explanation
@@ -168,101 +163,38 @@ export async function getExplanation(
 }
 
 /**
- * Fetch explanation from Google Gemini API
+ * Fetch explanation from our secure backend (which proxies to Gemini)
  */
-async function fetchFromGemini(
+async function fetchFromBackend(
   topic: string,
   context: string | undefined,
-  apiKey: string,
   language: 'en' | 'hi' | 'hinglish'
 ): Promise<Explanation> {
-  const langPrompt = language === 'hi' ? 'Explain in Hindi.' : language === 'hinglish' ? 'Explain in Hinglish (Hindi + English mix, natural student tone).' : 'Explain in English.';
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
   
-  const prompt = `You are ARIA, a highly advanced Virtual Research Assistant, similar to JARVIS or FRIDAY.
-  
-  ${langPrompt}
-  
-  Topic: ${topic}
-  Context: ${context || 'General scientific research'}
-  
-  Your goal is to have a human-like dialogue. 
-  1. If the user's request is too vague to build or invent (e.g., "make something cool", "kuch bada banate hain"), you MUST ask clarifying questions to understand their vision (intent: "clarification").
-  2. If the request is clear (e.g., "build a rocket engine", "human heart dikhao"), explain it and mark as ready to build.
-  3. Speak in a sophisticated, proactive, and slightly witty tone.
-  
-  Provide a JSON response with this exact structure:
-  {
-    "intent": "explanation" | "invention" | "clarification",
-    "isReadyToBuild": boolean,
-    "simple": "A sophisticated 2-sentence response for speech synthesis. If clarification, ask your questions here.",
-    "detailed": "A detailed technical explanation or a breakdown of what info you need to proceed.",
-    "suggestions": ["Practical application/Invention idea 1", "Idea 2", "Idea 3"],
-    "relatedTopics": ["Related topic 1", "Related topic 2", "Related topic 3"],
-    "formulas": ["Formula 1", "Formula 2"],
-    "researchPapers": ["Relevant research paper/concept title 1", "Title 2"]
-  }
-
-  IMPORTANT:
-  - If intent is "clarification", isReadyToBuild MUST be false.
-  - Return ONLY valid JSON, no markdown or extra text.`;
-
-  const response = await fetch(
-    'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey,
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: prompt,
-              },
-            ],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          topP: 0.9,
-          topK: 40,
-          maxOutputTokens: 500,
-        },
-      }),
-    }
-  );
+  const response = await fetch(`${backendUrl}/api/explain`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      topic,
+      context: context || 'General scientific research',
+      lang: language
+    }),
+  });
 
   if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(
-      `Gemini API error: ${response.status} - ${JSON.stringify(errorData)}`
-    );
+    throw new Error(`Backend API error: ${response.status}`);
   }
 
-  const data = await response.json();
-
-  if (!data.candidates || !data.candidates[0]) {
-    throw new Error('Invalid Gemini response structure');
-  }
-
-  const responseText = data.candidates[0].content.parts[0].text;
-  console.log('📖 Gemini response:', responseText);
-
-  // Extract JSON from response (in case of markdown wrapping)
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error('Could not extract JSON from response');
-  }
-
-  const parsed = JSON.parse(jsonMatch[0]);
+  const parsed = await response.json();
 
   return {
-    text: parsed.simple || 'Explanation available.',
-    scientificDetail: parsed.detailed || 'See simple explanation.',
+    text: parsed.text || parsed.simple || 'Explanation available.',
+    scientificDetail: parsed.scientificDetail || parsed.detailed || 'See simple explanation.',
     suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
-    relatedTopics: Array.isArray(parsed.relatedTopics) ? parsed.relatedTopics : [],
+    relatedTopics: Array.isArray(parsed.relatedTopics) ? parsed.relatedTopics : (Array.isArray(parsed.related_topics) ? parsed.related_topics : []),
     formulas: Array.isArray(parsed.formulas) ? parsed.formulas : [],
     researchPapers: Array.isArray(parsed.researchPapers) ? parsed.researchPapers : [],
     intent: parsed.intent || 'explanation',
