@@ -9,8 +9,7 @@ import {
 } from '@react-three/postprocessing';
 import { Vector2 } from 'three';
 
-const DEFAULT_MODEL =
-  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb';
+const DEFAULT_MODEL = '/models/helmet.glb';
 
 const LoadingBox = () => (
   <mesh rotation={[0.4, 0.4, 0]}>

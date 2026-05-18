@@ -17,7 +17,9 @@ export type CommandVerb =
   | 'compare'
   | 'help'
   | 'level'
-  | 'stop';
+  | 'stop'
+  | 'explode'
+  | 'assemble';
 
 export interface Command {
   verb: CommandVerb;
@@ -48,6 +50,8 @@ const COMMAND_PATTERNS: Record<CommandVerb, RegExp> = {
   level: /(?:go\s+to|change\s+to|switch\s+to)\s+(cell|tissue|organ|system|organism)\s+(?:level)?/i,
   stop: /(?:stop|pause|halt|cancel|ruko|bas)/i,
   help: /(?:help|what\s+can\s+you\s+do|how\s+do\s+i|guide|madad)/i,
+  explode: /(?:explode|disassemble|open\s+model|kholo)/i,
+  assemble: /(?:assemble|close\s+model|band\s+karo)/i,
 };
 
 // Known experiment objects defined in COMMAND_PATTERNS

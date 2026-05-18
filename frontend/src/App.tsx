@@ -67,6 +67,19 @@ const App: React.FC = () => {
     speechInput.onCommand = async (command) => {
       console.log('🎤 ARIO heard command:', command);
       
+      if (command === 'explode') {
+        setScene({ isExploded: true });
+        ario.speak('Exploding holographic view.');
+        return;
+      } else if (command === 'assemble') {
+        setScene({ isExploded: false });
+        ario.speak('Reassembling holographic model.');
+        return;
+      } else if (command === 'stop_talking') {
+        ario.stop();
+        return;
+      }
+
       try {
         const parsedCmd = parseCommand(command);
         console.log('✅ Parsed command:', parsedCmd);
@@ -146,16 +159,6 @@ const App: React.FC = () => {
         });
       } catch (error) {
         console.error('Error processing command:', error);
-      }
-
-      if (command === 'explode') {
-        setScene({ isExploded: true });
-        ario.speak('Exploding holographic view.');
-      } else if (command === 'assemble') {
-        setScene({ isExploded: false });
-        ario.speak('Reassembling holographic model.');
-      } else if (command === 'stop_talking') {
-        ario.stop();
       }
     };
 
