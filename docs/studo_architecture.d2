@@ -1,0 +1,90 @@
+
+# Studo Spatial OS Architecture
+
+# Overall System
+
+Frontend: Rectangle {
+  label: "Frontend (React, Three.js, MediaPipe)"
+  tooltip: "User Interface and 3D Rendering"
+}
+
+Backend: Rectangle {
+  label: "Backend (FastAPI, Socket.io)"
+  tooltip: "AI Brain, API, and Real-time Communication"
+}
+
+AI_Service: Rectangle {
+  label: "Google Gemini API"
+  tooltip: "Large Language Model for AI Brain"
+}
+
+User: Person
+
+User -> Frontend: "Interacts with UI (Webcam, Gestures)"
+
+Frontend -> Backend: "Sends Gesture Data, Voice Input, User Queries (WebSocket)"
+Backend -> Frontend: "Sends 3D Model Data, AI Responses, Real-time Updates (WebSocket)"
+
+Backend -> AI_Service: "Sends User Queries, Context for AI"
+AI_Service -> Backend: "Returns AI Responses, Knowledge"
+
+# Frontend Details
+
+Frontend.Browser: Rectangle {
+  label: "Web Browser"
+}
+
+Frontend.Webcam: Rectangle {
+  label: "User Webcam"
+}
+
+Frontend.MediaPipe: Rectangle {
+  label: "MediaPipe (Hand Tracking)"
+}
+
+Frontend.ThreeJS: Rectangle {
+  label: "Three.js / React Three Fiber"
+}
+
+Frontend.UI: Rectangle {
+  label: "Holographic UI (Tailwind CSS)"
+}
+
+Frontend.WebSpeech: Rectangle {
+  label: "Web Speech API (Text-to-Speech)"
+}
+
+Frontend.Webcam -> Frontend.MediaPipe: "Video Stream"
+Frontend.MediaPipe -> Frontend.ThreeJS: "Hand Landmark Data"
+Frontend.UI -> Frontend.ThreeJS: "Renders 3D Scene"
+Frontend.ThreeJS -> Frontend.Browser: "Displays 3D Scene"
+Frontend.WebSpeech -> Frontend.Browser: "Plays AI Voice Responses"
+
+# Backend Details
+
+Backend.FastAPI: Rectangle {
+  label: "FastAPI Application"
+}
+
+Backend.SocketIO: Rectangle {
+  label: "Socket.io Server"
+}
+
+Backend.FastAPI -> Backend.SocketIO: "Sends AI Responses to Frontend"
+Backend.SocketIO -> Backend.FastAPI: "Receives User Input from Frontend"
+
+# Data Flow
+
+User -> Frontend.Webcam: "Hand Gestures"
+Frontend.Webcam -> Frontend.MediaPipe: "Video Input"
+Frontend.MediaPipe -> Frontend.ThreeJS: "Processed Hand Landmarks (e.g., pinch, rotate)"
+Frontend.ThreeJS -> Frontend.UI: "Updates 3D Model based on Gestures"
+
+User -> Frontend.Browser: "Voice Input (via Microphone)"
+Frontend.Browser -> Backend.SocketIO: "Sends Voice Input (Text)"
+Backend.SocketIO -> Backend.FastAPI: "Forwards Text Input"
+Backend.FastAPI -> AI_Service: "Sends Prompt with Context"
+AI_Service -> Backend.FastAPI: "Returns AI Generated Response"
+Backend.FastAPI -> Backend.SocketIO: "Sends AI Response"
+Backend.SocketIO -> Frontend.WebSpeech: "Sends AI Response (Text)"
+Frontend.WebSpeech -> User: "Plays AI Response (Audio)"

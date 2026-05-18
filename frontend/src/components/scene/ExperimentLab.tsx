@@ -1,389 +1,114 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { Suspense, useRef } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls, ContactShadows } from '@react-three/drei';
+import { EffectComposer, Bloom, Scanline } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import { useStudoStore } from '../../store/useStudoStore';
+import { ModelLoader } from './ModelLoader';
+import { MoleculeRenderer } from './MoleculeRenderer';
 
-export const ExperimentLab: React.FC = () => {
-  const mountRef = useRef<HTMLDivElement>(null);
-  const sceneRef = useRef<THREE.Scene | null>(null);
-  const cameraRef = useRef<THREE.Camera | null>(null);
-  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const engineGroupRef = useRef<THREE.Group | null>(null);
-  const [selectedPart, setSelectedPart] = useState<THREE.Object3D | null>(null);
-  const [hoveredPart, setHoveredPart] = useState<THREE.Object3D | null>(null);
-  const { scene: sceneState } = useStudoStore();
-  const level = sceneState.level;
+// Abstract visual representations for different navigation levels when no specific model is loaded
+const AbstractLevelVisual: React.FC<{ level: string }> = ({ level }) => {
+  const groupRef = useRef<THREE.Group>(null);
+  const { scene } = useStudoStore();
 
-  useEffect(() => {
-    if (!mountRef.current) return;
-
-    // =====================================
-    // 1. SETUP SCENE
-    // =====================================
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0a0e27); // Dark space blue
-    scene.fog = new THREE.Fog(0x0a0e27, 100, 500);
-    sceneRef.current = scene;
-
-    // =====================================
-    // 2. SETUP CAMERA
-    // =====================================
-    const width = mountRef.current.clientWidth;
-    const height = mountRef.current.clientHeight;
-    const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-    camera.position.z = 5;
-    camera.position.y = 1;
-    cameraRef.current = camera;
-
-    // =====================================
-    // 3. SETUP RENDERER
-    // =====================================
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(width, height);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFShadowMap;
-    mountRef.current.appendChild(renderer.domElement);
-    rendererRef.current = renderer;
-
-    // =====================================
-    // 4. SETUP LIGHTING
-    // =====================================
-    // Ambient light for overall illumination
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-    scene.add(ambientLight);
-
-    // Main point light - cyan
-    const mainLight = new THREE.PointLight(0x00f0ff, 1.5, 50);
-    mainLight.position.set(5, 5, 5);
-    mainLight.castShadow = true;
-    mainLight.shadow.mapSize.width = 2048;
-    mainLight.shadow.mapSize.height = 2048;
-    scene.add(mainLight);
-
-    // Secondary light - magenta
-    const secondaryLight = new THREE.PointLight(0xff00ff, 1, 40);
-    secondaryLight.position.set(-5, 3, -5);
-    scene.add(secondaryLight);
-
-    // =====================================
-    // 5. CREATE CONTENT BASED ON LEVEL
-    // =====================================
-    const contentGroup = new THREE.Group();
-    engineGroupRef.current = contentGroup;
-    scene.add(contentGroup);
-
-    if (level === 'system' || level === 'organism') {
-      // ENGINE MODEL (Standard view)
-      const cylinderGeometry = new THREE.CylinderGeometry(1.2, 1.2, 2.5, 32);
-      const cylinderMaterial = new THREE.MeshPhongMaterial({ color: 0xff00ff, emissive: 0x440044, shininess: 100 });
-      const cylinder = new THREE.Mesh(cylinderGeometry, cylinderMaterial);
-      cylinder.name = 'cylinder';
-      contentGroup.add(cylinder);
-
-      const pistonGeometry = new THREE.SphereGeometry(0.4, 32, 32);
-      const pistonMaterial = new THREE.MeshPhongMaterial({ color: 0x00f0ff, emissive: 0x004466, shininess: 150 });
-      const piston = new THREE.Mesh(pistonGeometry, pistonMaterial);
-      piston.position.y = 1.8;
-      piston.name = 'piston';
-      contentGroup.add(piston);
-
-      const crankshaftGeometry = new THREE.CylinderGeometry(0.25, 0.25, 3, 16);
-      const crankshaftMaterial = new THREE.MeshPhongMaterial({ color: 0x00d0ff, emissive: 0x003344, shininess: 120 });
-      const crankshaft = new THREE.Mesh(crankshaftGeometry, crankshaftMaterial);
-      crankshaft.rotation.z = Math.PI / 2;
-      crankshaft.name = 'crankshaft';
-      contentGroup.add(crankshaft);
-    } 
-    else if (level === 'organ' || level === 'tissue') {
-      // TISSUE/STRUCTURE MODEL (Abstract biological/mechanical structure)
-      const structureGeometry = new THREE.IcosahedronGeometry(1.5, 2);
-      const structureMaterial = new THREE.MeshPhongMaterial({ 
-        color: 0xff44aa, 
-        wireframe: true,
-        emissive: 0x220011,
-        transparent: true,
-        opacity: 0.6
-      });
-      const structure = new THREE.Mesh(structureGeometry, structureMaterial);
-      structure.name = 'tissue-layer';
-      contentGroup.add(structure);
-
-      // Add "internal" components
-      for (let i = 0; i < 8; i++) {
-        const component = new THREE.Mesh(
-          new THREE.SphereGeometry(0.3, 16, 16),
-          new THREE.MeshPhongMaterial({ color: 0x00ffff, emissive: 0x003333 })
-        );
-        component.position.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(2);
-        component.name = `sub-component-${i}`;
-        contentGroup.add(component);
-      }
+  useFrame((state) => {
+    if (groupRef.current) {
+       // Gentle rotation
+       groupRef.current.rotation.y += 0.005;
+       groupRef.current.position.y = Math.sin(state.clock.elapsedTime) * 0.1;
+       
+       // Handle simple explosion animation for the abstract visuals
+       if (scene.isExploded) {
+         groupRef.current.scale.lerp(new THREE.Vector3(1.5, 1.5, 1.5), 0.1);
+       } else {
+         groupRef.current.scale.lerp(new THREE.Vector3(1, 1, 1), 0.1);
+       }
     }
-    else if (level === 'cell') {
-      // UNIT CELL MODEL
-      const cellGeometry = new THREE.SphereGeometry(1.8, 32, 32);
-      const cellMaterial = new THREE.MeshPhongMaterial({ 
-        color: 0x00ff88, 
-        transparent: true, 
-        opacity: 0.3,
-        shininess: 200,
-        side: THREE.BackSide
-      });
-      const cellWall = new THREE.Mesh(cellGeometry, cellMaterial);
-      cellWall.name = 'unit-cell-wall';
-      contentGroup.add(cellWall);
-
-      // Nucleus / Core
-      const nucleus = new THREE.Mesh(
-        new THREE.SphereGeometry(0.6, 32, 32),
-        new THREE.MeshPhongMaterial({ color: 0xff00ff, emissive: 0x330033 })
-      );
-      nucleus.name = 'nucleus';
-      contentGroup.add(nucleus);
-
-      // DNA / Data Strands
-      const curve = new THREE.CatmullRomCurve3([
-        new THREE.Vector3(-1, -1, 0),
-        new THREE.Vector3(-0.5, 0.5, 0.5),
-        new THREE.Vector3(0.5, -0.5, -0.5),
-        new THREE.Vector3(1, 1, 0),
-      ]);
-      const dnaGeom = new THREE.TubeGeometry(curve, 20, 0.05, 8, false);
-      const dnaMat = new THREE.MeshPhongMaterial({ color: 0x00f0ff });
-      const dna = new THREE.Mesh(dnaGeom, dnaMat);
-      dna.name = 'core-data-strand';
-      contentGroup.add(dna);
-    }
-
-    // =====================================
-    // 6. ADD GROUND PLANE
-    // =====================================
-    const groundGeometry = new THREE.PlaneGeometry(20, 20);
-    const groundMaterial = new THREE.MeshStandardMaterial({
-      color: 0x0f1a3d,
-      metalness: 0.3,
-      roughness: 0.7,
-    });
-    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -2;
-    ground.receiveShadow = true;
-    scene.add(ground);
-
-    // =====================================
-    // 7. MOUSE/RAYCASTER SETUP
-    // =====================================
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
-    const originalMaterials = new Map<THREE.Object3D, THREE.Material | THREE.Material[]>();
-
-    // Store original materials
-    contentGroup.children.forEach((child) => {
-      if (child instanceof THREE.Mesh) {
-        originalMaterials.set(child, child.material);
-      }
-    });
-
-    // =====================================
-    // 8. EVENT LISTENERS
-    // =====================================
-
-    // Mouse move for hover effect
-    const onMouseMove = (event: MouseEvent) => {
-      if (!mountRef.current) return;
-
-      const rect = renderer.domElement.getBoundingClientRect();
-      mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-      raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObjects(contentGroup.children);
-
-      // Reset previous hover
-      if (hoveredPart && hoveredPart instanceof THREE.Mesh) {
-        const originalMat = originalMaterials.get(hoveredPart);
-        if (originalMat) {
-          hoveredPart.material = originalMat;
-        }
-      }
-
-      // Highlight new hover
-      if (intersects.length > 0) {
-        const hovered = intersects[0].object;
-        setHoveredPart(hovered);
-
-        if (hovered instanceof THREE.Mesh) {
-          const hoverMaterial = new THREE.MeshPhongMaterial({
-            color: 0x00ff00,
-            emissive: 0x009900,
-            shininess: 200,
-          });
-          hovered.material = hoverMaterial;
-        }
-      } else {
-        setHoveredPart(null);
-      }
-    };
-
-    // Mouse click for selection
-    const onMouseClick = (event: MouseEvent) => {
-      if (!mountRef.current) return;
-
-      const rect = renderer.domElement.getBoundingClientRect();
-      mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-      raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObjects(contentGroup.children);
-
-      if (intersects.length > 0) {
-        const clicked = intersects[0].object;
-        setSelectedPart(clicked);
-        console.log(`🔧 Selected: ${clicked.name}`);
-
-        // Dispatch custom event for other components
-        window.dispatchEvent(
-          new CustomEvent('part-selected', {
-            detail: { partName: clicked.name, object: clicked },
-          })
-        );
-
-        // Highlight selected
-        if (clicked instanceof THREE.Mesh) {
-          const selectMaterial = new THREE.MeshPhongMaterial({
-            color: 0xffff00,
-            emissive: 0xffaa00,
-            shininess: 200,
-          });
-          clicked.material = selectMaterial;
-        }
-      }
-    };
-
-    renderer.domElement.addEventListener('mousemove', onMouseMove);
-    renderer.domElement.addEventListener('click', onMouseClick);
-
-    // =====================================
-    // 9. ANIMATION LOOP
-    // =====================================
-    let animationId: number;
-
-    const animate = () => {
-      animationId = requestAnimationFrame(animate);
-
-      // Auto-rotate engine
-      contentGroup.rotation.y += 0.005;
-      contentGroup.rotation.x += 0.001;
-
-      // Animate piston (up and down motion)
-      const pistonMesh = contentGroup.children.find((child) => child.name === 'piston');
-      if (pistonMesh) {
-        pistonMesh.position.y = 1.8 + Math.sin(Date.now() * 0.005) * 0.4;
-      }
-
-      // Rotate crankshaft
-      const crankshaftMesh = contentGroup.children.find((child) => child.name === 'crankshaft');
-      if (crankshaftMesh) {
-        crankshaftMesh.rotation.z += 0.02;
-      }
-
-      // Animate valves (open/close)
-      const valveInlet = contentGroup.children.find((child) => child.name === 'valve-inlet');
-      const valveExhaust = contentGroup.children.find((child) => child.name === 'valve-exhaust');
-      if (valveInlet && valveExhaust) {
-        const valveOpen = Math.sin(Date.now() * 0.008) * 0.3;
-        valveInlet.position.y = 1.8 + valveOpen;
-        valveExhaust.position.y = 1.8 - valveOpen;
-      }
-
-      renderer.render(scene, camera);
-    };
-
-    animate();
-
-    // =====================================
-    // 10. WINDOW RESIZE HANDLER
-    // =====================================
-    const onWindowResize = () => {
-      if (!mountRef.current) return;
-
-      const newWidth = mountRef.current.clientWidth;
-      const newHeight = mountRef.current.clientHeight;
-
-      if (camera instanceof THREE.PerspectiveCamera) {
-        camera.aspect = newWidth / newHeight;
-        camera.updateProjectionMatrix();
-      }
-
-      renderer.setSize(newWidth, newHeight);
-    };
-
-    window.addEventListener('resize', onWindowResize);
-
-    // =====================================
-    // 11. CLEANUP
-    // =====================================
-    return () => {
-      cancelAnimationFrame(animationId);
-      window.removeEventListener('resize', onWindowResize);
-      renderer.domElement.removeEventListener('mousemove', onMouseMove);
-      renderer.domElement.removeEventListener('click', onMouseClick);
-
-      // Dispose resources
-      contentGroup.children.forEach(child => {
-        if (child instanceof THREE.Mesh) {
-          child.geometry.dispose();
-          if (Array.isArray(child.material)) {
-            child.material.forEach(m => m.dispose());
-          } else {
-            child.material.dispose();
-          }
-        }
-      });
-      groundGeometry.dispose();
-      groundMaterial.dispose();
-      renderer.dispose();
-
-      if (mountRef.current?.contains(renderer.domElement)) {
-        mountRef.current.removeChild(renderer.domElement);
-      }
-    };
-  }, []);
+  });
 
   return (
-    <div
-      ref={mountRef}
-      style={{
-        width: '100%',
-        height: '100%',
-        borderRadius: '8px',
-        border: '2px solid #00f0ff',
-        overflow: 'hidden',
-        boxShadow: '0 0 20px rgba(0, 240, 255, 0.3), inset 0 0 20px rgba(0, 240, 255, 0.1)',
-      }}
-    >
-      {/* Tooltip for selected part */}
-      {selectedPart && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '20px',
-            left: '20px',
-            background: 'rgba(10, 14, 39, 0.9)',
-            border: '1px solid #00f0ff',
-            padding: '12px 16px',
-            borderRadius: '6px',
-            color: '#00f0ff',
-            fontSize: '14px',
-            fontWeight: 'bold',
-            textTransform: 'uppercase',
-            fontFamily: 'monospace',
-            boxShadow: '0 0 15px rgba(0, 240, 255, 0.5)',
-          }}
-        >
-          🔧 {selectedPart.name}
-        </div>
+    <group ref={groupRef}>
+      {level === 'system' || level === 'organism' ? (
+        <group>
+          <mesh position={[0, 0, 0]}>
+            <cylinderGeometry args={[1.2, 1.2, 2.5, 32]} />
+            <meshPhongMaterial color={0xff00ff} emissive={0x440044} shininess={100} />
+          </mesh>
+          <mesh position={[0, 1.8, 0]}>
+            <sphereGeometry args={[0.4, 32, 32]} />
+            <meshPhongMaterial color={0x00f0ff} emissive={0x004466} shininess={150} />
+          </mesh>
+          <mesh position={[0, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.25, 0.25, 3, 16]} />
+            <meshPhongMaterial color={0x00d0ff} emissive={0x003344} shininess={120} />
+          </mesh>
+        </group>
+      ) : level === 'organ' || level === 'tissue' ? (
+        <mesh>
+          <icosahedronGeometry args={[1.5, 2]} />
+          <meshPhongMaterial color={0xff44aa} wireframe emissive={0x220011} transparent opacity={0.6} />
+        </mesh>
+      ) : (
+        <group>
+          <mesh>
+            <sphereGeometry args={[1.8, 32, 32]} />
+            <meshPhongMaterial color={0x00ff88} transparent opacity={0.3} shininess={200} side={THREE.BackSide} />
+          </mesh>
+          <mesh>
+            <sphereGeometry args={[0.6, 32, 32]} />
+            <meshPhongMaterial color={0xff00ff} emissive={0x330033} />
+          </mesh>
+        </group>
       )}
+    </group>
+  );
+};
+
+export const ExperimentLab: React.FC = () => {
+  const { scene, knowledge } = useStudoStore();
+
+  const renderContent = () => {
+    // If a specific dynamic model has been loaded (via Gemini / API or UI)
+    if (scene.currentModel || scene.hologramType === 'molecule') {
+      if (scene.hologramType === 'molecule') {
+        return <MoleculeRenderer query={knowledge.query || 'water'} />;
+      }
+      return <ModelLoader modelPath={scene.currentModel!} />;
+    }
+
+    // Otherwise, show the abstract visual based on the navigation level (fallback)
+    return <AbstractLevelVisual level={scene.level} />;
+  };
+
+  return (
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      <Canvas shadows camera={{ position: [0, 0, 5], fov: 50 }} gl={{ antialias: true, alpha: true }}>
+        <color attach="background" args={['#0a0e27']} />
+        <fog attach="fog" args={['#0a0e27', 5, 15]} />
+        
+        <ambientLight intensity={0.5} />
+        <pointLight position={[5, 5, 5]} color="#00f0ff" intensity={1.5} castShadow />
+        <pointLight position={[-5, 3, -5]} color="#ff00ff" intensity={1} />
+        
+        <Suspense fallback={
+          <mesh rotation={[0.4, 0.4, 0]}>
+            <boxGeometry args={[1.2, 1.2, 1.2]} />
+            <meshStandardMaterial color="#00f2ff" wireframe />
+          </mesh>
+        }>
+          {renderContent()}
+          
+          <ContactShadows position={[0, -2, 0]} opacity={0.5} scale={10} blur={2} color="#00f0ff" />
+          
+          <EffectComposer>
+            <Bloom luminanceThreshold={0.2} luminanceSmoothing={0.9} intensity={1.5} mipmapBlur />
+            <Scanline opacity={0.05} />
+          </EffectComposer>
+        </Suspense>
+
+        <OrbitControls enablePan={false} enableZoom={true} />
+      </Canvas>
     </div>
   );
 };
