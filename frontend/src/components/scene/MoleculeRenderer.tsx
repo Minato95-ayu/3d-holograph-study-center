@@ -45,7 +45,14 @@ export const MoleculeRenderer: React.FC<MoleculeRendererProps> = ({ query }) => 
       prevPos.current = null;
       groupRef.current.scale.lerp(new THREE.Vector3(1, 1, 1), 0.1);
     }
-    groupRef.current.position.y = Math.sin(state.clock.elapsedTime * 0.5) * 0.1;
+    if (scene.isSimulating) {
+      groupRef.current.rotation.y += 0.05;
+      groupRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 5) * 0.1;
+      groupRef.current.position.y = Math.sin(state.clock.elapsedTime * 8) * 0.2;
+    } else {
+      groupRef.current.position.y = Math.sin(state.clock.elapsedTime * 0.5) * 0.1;
+      groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, 0, 0.1);
+    }
   });
 
   if (!moleculeData) {

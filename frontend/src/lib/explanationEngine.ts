@@ -11,8 +11,9 @@ export interface Explanation {
   relatedTopics: string[]; // 2-3 related topics
   formulas?: string[];
   researchPapers?: string[];
-  intent?: 'explanation' | 'invention' | 'clarification';
+  intent?: 'explanation' | 'invention' | 'clarification' | 'argument';
   isReadyToBuild?: boolean;
+  crossQuestions?: string[];
   source: 'gemini' | 'fallback';
 }
 
@@ -199,6 +200,7 @@ async function fetchFromBackend(
     researchPapers: Array.isArray(parsed.researchPapers) ? parsed.researchPapers : [],
     intent: parsed.intent || 'explanation',
     isReadyToBuild: parsed.isReadyToBuild ?? true,
+    crossQuestions: Array.isArray(parsed.crossQuestions) ? parsed.crossQuestions : [],
     source: 'gemini',
   };
 }

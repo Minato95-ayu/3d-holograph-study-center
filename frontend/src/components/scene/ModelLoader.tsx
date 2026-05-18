@@ -52,8 +52,17 @@ export const ModelLoader: React.FC<ModelLoaderProps> = ({ modelPath }) => {
         groupRef.current.scale.lerp(new THREE.Vector3(1.5, 1.5, 1.5), 0.1);
       }
 
-      // 2. Gentle floating animation
-      groupRef.current.position.y = (Math.sin(state.clock.elapsedTime * 0.5) * 0.1) - 0.5;
+      // 2. Gentle floating animation or active simulation physics
+      if (scene.isSimulating) {
+        // Active "Run Simulation" state: rotate faster and bounce more vigorously
+        groupRef.current.rotation.y += 0.02;
+        groupRef.current.rotation.z = Math.sin(state.clock.elapsedTime * 10) * 0.05;
+        groupRef.current.position.y = (Math.sin(state.clock.elapsedTime * 5) * 0.3) - 0.5;
+      } else {
+        // Normal gentle float
+        groupRef.current.position.y = (Math.sin(state.clock.elapsedTime * 0.5) * 0.1) - 0.5;
+        groupRef.current.rotation.z = THREE.MathUtils.lerp(groupRef.current.rotation.z, 0, 0.1);
+      }
 
       // 3. Explosion Logic
       groupRef.current.traverse((child) => {

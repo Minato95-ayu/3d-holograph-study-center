@@ -14,9 +14,16 @@ const AbstractLevelVisual: React.FC<{ level: string }> = ({ level }) => {
 
   useFrame((state) => {
     if (groupRef.current) {
-       // Gentle rotation
-       groupRef.current.rotation.y += 0.005;
-       groupRef.current.position.y = Math.sin(state.clock.elapsedTime) * 0.1;
+       // Gentle rotation or active simulation
+       if (scene.isSimulating) {
+         groupRef.current.rotation.y += 0.05;
+         groupRef.current.rotation.z = Math.sin(state.clock.elapsedTime * 8) * 0.1;
+         groupRef.current.position.y = Math.sin(state.clock.elapsedTime * 6) * 0.3;
+       } else {
+         groupRef.current.rotation.y += 0.005;
+         groupRef.current.rotation.z = THREE.MathUtils.lerp(groupRef.current.rotation.z, 0, 0.1);
+         groupRef.current.position.y = Math.sin(state.clock.elapsedTime) * 0.1;
+       }
        
        // Handle simple explosion animation for the abstract visuals
        if (scene.isExploded) {

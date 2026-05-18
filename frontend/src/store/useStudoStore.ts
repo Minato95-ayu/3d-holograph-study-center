@@ -20,6 +20,7 @@ interface StudoState {
     modelLoaded: boolean;
     currentModel: string | null;
     isExploded: boolean;
+    isSimulating: boolean;
     hologramType: 'gltf' | 'molecule' | 'dna' | 'atom' | 'solar_system' | 'default';
     level: 'organism' | 'system' | 'organ' | 'tissue' | 'cell';
   };
@@ -36,6 +37,7 @@ interface StudoState {
     domain: string;
     loading: boolean;
     ario_intro: string;
+    crossQuestions?: string[];
     experiment: {
       shape: string | null;
       calculations: Record<string, number> | null;
@@ -79,6 +81,7 @@ export const useStudoStore = create<StudoState>((set) => ({
     modelLoaded: false,
     currentModel: null,
     isExploded: false,
+    isSimulating: false,
     hologramType: 'default',
     level: 'system',
   },
